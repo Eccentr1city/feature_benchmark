@@ -13,7 +13,7 @@ def get_activation_data_for_feature(url):
     """
     STRUCTURE OF cleaned_data
 
-    exapmles: list of examples where each example is {'maxValue': int, 'tokens': list, 'values': list}
+    exapmles: list of examples where each example is {'maxValue': int, 'maxValueTokenIndex': int, 'tokens': list, 'values': list}
         tokens and values have same length where values has the activation on each token
 
     explanations: contains things like
@@ -23,6 +23,7 @@ def get_activation_data_for_feature(url):
         'modelId': 'gpt2-small', 
     """
     parsed_json = fetch_and_parse_json(url)
+    # pprint.pprint(parsed_json['activations'][0])
 
     cleaned_data = {}
     cleaned_data['explanations'] = parsed_json['explanations']
@@ -31,6 +32,7 @@ def get_activation_data_for_feature(url):
         examples.append(
             {
                 'maxValue': example['maxValue'],
+                'maxValueTokenIndex': example['maxValueTokenIndex'],
                 'tokens': example['tokens'],
                 'values': example['values'],
             }
@@ -41,8 +43,8 @@ def get_activation_data_for_feature(url):
 
     return cleaned_data
 
-url = "https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/0"
-data = get_activation_data_for_feature(url)
+# url = "https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/0"
+# data = get_activation_data_for_feature(url)
 
-pprint.pprint(data)
-print(len(data['examples'])) ## Has 76 examples
+# # pprint.pprint(data)
+# print(len(data['examples'])) ## Has 76 examples
