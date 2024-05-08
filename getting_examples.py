@@ -42,11 +42,3 @@ def get_activation_data_for_feature(url):
     cleaned_data['examples'] = examples
 
     return cleaned_data
-
-# import random
-# i = 24575
-# url = f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{i}"
-# data = get_activation_data_for_feature(url)
-
-# # pprint.pprint(data)
-# print(len(data['examples'])) ## Has 76 examples
