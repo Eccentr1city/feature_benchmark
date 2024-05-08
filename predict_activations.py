@@ -7,7 +7,7 @@ from getting_examples import get_activation_data_for_feature
 def find_first_number(text):
     # Return the first number in a string
     match = re.search(r'\b\d+(\.\d+)?', text)
-    return match.group(0) if match else None
+    return float(match.group(0)) if match else None
 
 client = OpenAI()
 
