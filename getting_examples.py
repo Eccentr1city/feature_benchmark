@@ -98,5 +98,3 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     # Return the values
     return desc, pos, neg, highest_activation
 
-pprint.pprint(get_pos_neg_examples(1, 3, 10, 'self'))
-
