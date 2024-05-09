@@ -8,48 +8,47 @@ def fetch_and_parse_json(url):
     if response.status_code == 200:
         return json.loads(response.text)
     else:
-        raise Exception(f"Failed to fetch data: {response.status_code}")
+        raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
 
-def get_activation_data_for_feature(url):
-    """
-    STRUCTURE OF cleaned_data
+# def get_activation_data_for_feature(url):
+#     """
+#     STRUCTURE OF cleaned_data
 
-    exapmles: list of examples where each example is {'maxValue': int, 'maxValueTokenIndex': int, 'tokens': list, 'values': list}
-        tokens and values have same length where values has the activation on each token
+#     exapmles: list of examples where each example is {'maxValue': int, 'maxValueTokenIndex': int, 'tokens': list, 'values': list}
+#         tokens and values have same length where values has the activation on each token
 
-    explanations: contains things like
-        'author': {'country': 'US', 'name': 'gpt-3.5-turbo'},
-        'description': 'phrases related to Q&A sessions or dialogues involving opinions and discussions',
-        'layer': '9-res-jb',
-        'modelId': 'gpt2-small', 
-    """
-    parsed_json = fetch_and_parse_json(url)
-    # pprint.pprint(parsed_json['activations'][0])
+#     explanations: contains things like
+#         'author': {'country': 'US', 'name': 'gpt-3.5-turbo'},
+#         'description': 'phrases related to Q&A sessions or dialogues involving opinions and discussions',
+#         'layer': '9-res-jb',
+#         'modelId': 'gpt2-small', 
+#     """
+#     parsed_json = fetch_and_parse_json(url)
 
-    cleaned_data = {}
-    cleaned_data['explanations'] = parsed_json['explanations']
-    examples = []
-    for example in parsed_json['activations']:
-        examples.append(
-            {
-                'max_value': example['maxValue'],
-                'max_value_token_index': example['maxValueTokenIndex'],
-                'tokens': example['tokens'],
-                'values': example['values'],
-            }
-        )
-        # assert len(example['tokens']) == len(example['values']), "Error"
+#     cleaned_data = {}
+#     cleaned_data['explanations'] = parsed_json['explanations']
+#     examples = []
+#     for example in parsed_json['activations']:
+#         examples.append(
+#             {
+#                 'max_value': example['maxValue'],
+#                 'max_value_token_index': example['maxValueTokenIndex'],
+#                 'tokens': example['tokens'],
+#                 'values': example['values'],
+#             }
+#         )
+#         # assert len(example['tokens']) == len(example['values']), "Error"
 
-    cleaned_data['examples'] = examples
+#     cleaned_data['examples'] = examples
 
-    return cleaned_data
+#     return cleaned_data
 
 def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = False):
     """
     Input:
-    feature_id: int
-    num_pos: int
-    num_neg: int
+    feature_id: int >= 0
+    num_pos: int >= 0
+    num_neg: int >= 0
     neg_type: "self" or "others"
 
     Output dictionary:
@@ -78,8 +77,11 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     
     # Calculate data for positive examples 
     pos = []
-    # pos_indices = random.sample(range(parsed_json['activations'][num_pos]['maxValue']), num_pos) if not randomize_pos_examples else range(num_pos)
-    pos_indices = range(num_pos)
+
+    ####### IMPLEMENT THIS SOOON ############
+    # pos_indices = random.sample(range(parsed_json['activations'][num_pos]['maxValue']), num_pos) if not randomize_pos_examples else random.sample(range(num_pos), num_pos)
+    pos_indices = random.sample(range(num_pos), num_pos)
+
     for i in pos_indices:
         example = parsed_json['activations'][i]
         elem = {
@@ -94,9 +96,28 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     
     # Calculate data for negative examples
     neg = []
+
+    # neg_features = random.sample(range(10000), 20, replace=False)
+
+    # if feature_id in neg_features:
+    #     neg_features.remove(feature_id)
+
+    # neg_features = [fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}") for feature_id in neg_features]
+
+
+
+    # for i in range():
+    #     example = parsed_json['activations'][i]
+    #     elem = {
+    #         'max_value': 0,
+    #         'sentence_string': ''.join(example['tokens']),
+    #         'tokens': example['tokens'],
+    #         'values': [0]*len(example['tokens']),
+    #     }
+    #     neg.append(elem)
             
     # Return the values
     return desc, pos, neg, highest_activation
 
-pprint.pprint(get_pos_neg_examples(1, 3, 10, 'self'))
+# pprint.pprint(get_pos_neg_examples(1, 3, 10, 'self'))
 
