@@ -6,7 +6,11 @@ import re
 def find_first_number(text):
     # Return the first number in a string
     match = re.search(r'\b\d+(\.\d+)?', text)
-    return float(match.group(0)) if match else None
+    if match:
+        return float(match.group(0))
+    else:
+        # raise Exception("No valid model prediction")
+        return None 
 
 def parse_binary_response(text):
     # Search for the strings "high" and "low" and return whichever occurs first
@@ -14,6 +18,7 @@ def parse_binary_response(text):
     if match:
         return 1 if match.group(0).lower() == 'high' else 0
     else:
+        # raise Exception("No valid model prediction")
         return None 
 
 def run_in_parallel(func, args_list):

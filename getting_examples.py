@@ -6,17 +6,19 @@ import random
 import requests
 import time
 
-
 def fetch_and_parse_json(url):
+    print("WARNING: Querying Neuronpedia API")
     response = requests.get(url)
     if response.status_code == 200:
         return json.loads(response.text)
     else:
         raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
 
-def fetch_feature_data(feature_id):
+def fetch_feature_data(args):
+    feature_id, feature_data = args
     ## This really just has to return the parsed json with "activations" key and "explanations" key
-    return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
+    return feature_data[feature_id]
+    # return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
 
 def worker(feature, output):
     result = fetch_feature_data(feature)
@@ -34,7 +36,7 @@ def get_dict_from_example(example):
     return elem
 
 ## Could add different model or layer parameters to get more from neuronpedia
-def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
+def get_pos_neg_examples(feature_id, feature_data, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
     """
     Input:
     feature_id: int >= 0
@@ -57,7 +59,7 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     assert neg_type in ['self', 'others'], 'Invalid neg_type'
 
     # Get feature parsed_json, description and highest activation
-    parsed_json = fetch_feature_data(feature_id)
+    parsed_json = fetch_feature_data((feature_id, feature_data))
     desc = parsed_json['explanations'][0]['description']
     highest_activation = parsed_json['activations'][0]['maxValue']
 
@@ -90,11 +92,15 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
                 neg.append(elem)
     elif neg_type == 'others':
         np.random.seed(seed)
-        neg_features = np.random.choice(10000, size=6*int(num_neg**0.5), replace=False)
-        if feature_id in neg_features:
-            neg_features.remove(feature_id)
+        neg_features = np.random.choice(len(feature_data) - 1, size=num_neg, replace=False)
+        for i in range(len(neg_features)):
+            if neg_features[i] >= feature_id:
+                neg_features[i] += 1
+            
+            
+        neg_data = [fetch_feature_data((neg_feature, feature_data)) for neg_feature in neg_features]
 
-        neg_data = run_in_parallel(fetch_feature_data, neg_features)
+        # neg_data = run_in_parallel(fetch_feature_data, [(neg_feature_id, feature_data) for neg_feature_id in neg_features])
 
         for feature_parsed_json in neg_data:
             h_a = feature_parsed_json['activations'][0]['maxValue']
@@ -120,8 +126,24 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     return desc, pos, neg, highest_activation
 
 if __name__ == "__main__":
+    # pprint.pprint(get_pos_neg_examples(1, 3, 3, 'others'))
+    # save_json_results(results, 'feat1.json')
+
+    # results = load_json_results('feat1.json')
+    # for result in results:
+    #     print(result['index'])
+    #     pprint.pprint(result)
+    #     break
+
+    # print(len(results))
+
     start = time.time()
-    pprint.pprint(get_pos_neg_examples(1, 3, 3, 'others'))
+
+    # for i in range(100):
+    #     get_pos_neg_examples(i, feature_data, 3, 3, 'others')
+    # # fetch_feature_data(2)
+    # # fetch_feature_data(3)
+
     end = time.time()
     print(f"Time: {end - start}")
 
