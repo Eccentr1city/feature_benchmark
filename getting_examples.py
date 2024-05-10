@@ -65,7 +65,7 @@ def get_dict_from_example(example):
     }
     return elem
 
-def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = False):
+def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = True):
     """
     Input:
     feature_id: int >= 0
@@ -97,15 +97,15 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     # Calculate pos
     pos = []
 
-    ####### IMPLEMENT THIS SOOON ############
-    # pos_indices = np.random.choice(range(parsed_json['activations'][num_pos]['maxValue']), num_pos) if not randomize_pos_examples else np.random.choice(range(num_pos), num_pos)
-    pos_indices = list(range(num_pos))
-    random.shuffle(pos_indices)
+    for example in parsed_json['activations']:
+        if example['maxValue'] >= 0.1*highest_activation:
+            elem = get_dict_from_example(example)
+            pos.append(elem)
+    
+    if randomize_pos_examples:
+        random.shuffle(pos)
 
-    for i in pos_indices:
-        example = parsed_json['activations'][i]
-        elem = get_dict_from_example(example)
-        pos.append(elem)
+    pos = pos[:num_pos]
     
 
     # Calculate neg
@@ -148,7 +148,7 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
 
 if __name__ == "__main__":
     start = time.time()
-    pprint.pprint(get_pos_neg_examples(1, 3, 3, 'self'))
+    pprint.pprint(get_pos_neg_examples(1, 3, 3, 'others'))
     end = time.time()
     print(f"Time: {end - start}")
 
