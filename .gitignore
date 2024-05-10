@@ -2,3 +2,5 @@
 feat_bench/
 __pycache__/
 feats.json
+.DS_Store
+results/.DS_Store
