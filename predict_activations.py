@@ -12,11 +12,23 @@ from utils import *
 
 client = OpenAI()
 
-def predict_activations(feature_index, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+def ask_model(system_prompt, user_message, num_completions, binary_class):
+    completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            n=num_completions,
+            max_tokens=2 if binary_class else 5
+        )
+    return completion
+
+def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
     # Get positive and negative examples of the feature activation
     num_pos = test_pos + show_pos
     num_neg = test_neg + show_neg
-    description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos, seed=seed)
+    description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, feature_data, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos, seed=seed)
 
     if binary_class:
         for sentence in pos_examples:
@@ -68,15 +80,7 @@ def predict_activations(feature_index, test_pos=20, test_neg=20, show_pos=0, sho
             user_message += f'responding with a number between 0 and {highest_activation:.2f}.'
         user_message += f'\nSentence: "{sentence_string}" \nRemember, the english description of the feature is: "{description}"'
        
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
-            n=num_completions,
-            max_tokens=2 if binary_class else 5
-        )
+        completion = ask_model(system_prompt, user_message, num_completions, binary_class)
         
         if debug:
             print(sentence_string)
@@ -84,7 +88,14 @@ def predict_activations(feature_index, test_pos=20, test_neg=20, show_pos=0, sho
         prediction = 0
         for i in range(num_completions):
             response = completion.choices[i].message.content
-            prediction += parse_binary_response(response) if binary_class else find_first_number(response)
+            pred = parse_binary_response(response) if binary_class else find_first_number(response)
+            if pred is None:
+                print('WARNING: Resampling')
+                resample = ask_model(system_prompt, user_message, 1, binary_class).choices[0].message.content
+                pred = parse_binary_response(resample) if binary_class else find_first_number(resample)
+            if pred is None:
+                raise Exception("No valid model prediction")
+            prediction += pred
         prediction /= num_completions
         true = sentence['max_value']
         if binary_class:
@@ -97,10 +108,10 @@ def predict_activations(feature_index, test_pos=20, test_neg=20, show_pos=0, sho
     return predictions, extra_data
 
 def predict_wrapper(args):
-    feature_index, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed = args
-    return predict_activations(feature_index, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
+    feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed = args
+    return predict_activations(feature_index, feature_data, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
 
-def run_experiments(num_features, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
     """
     - num_features: the number of random features to test
     - show_pos and show_neg: the number of positive and negative examples to show GPT3.5, respectively.
@@ -118,14 +129,9 @@ def run_experiments(num_features, test_pos=20, test_neg=20, show_pos=0, show_neg
 
     timestamp = time.time()
     np.random.seed(seed)
-    feature_indices = [int(x) for x in np.random.choice(24000, num_features, replace=False)]
+    feature_indices = [int(x) for x in np.random.choice(len(feature_data), num_features, replace=False)]
 
-    # predict_wrapper = partial(predict_activations, client=client, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
-
-    # # predict_activations_results = run_in_parallel(predict_wrapper, [(feature_index, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices])
-    # predict_activations_results = run_in_parallel(predict_wrapper, feature_indices)
-
-    args = [(feature_index, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
+    args = [(feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
     with concurrent.futures.ProcessPoolExecutor() as executor:
         predict_activations_results = list(executor.map(predict_wrapper, args))
 
