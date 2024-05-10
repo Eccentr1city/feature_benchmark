@@ -101,6 +101,20 @@ def predict_wrapper(args):
     return predict_activations(feature_index, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
 
 def run_experiments(num_features, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+    """
+    - num_features: the number of random features to test
+    - show_pos and show_neg: the number of positive and negative examples to show GPT3.5, respectively.
+    - test_pos and test_neg: the number of positive and negative test examples, respectively.
+    - binary_classify specifies whether to predict whether the feature binary activates or does not, otherwise predicts continuous activations
+    - neg_type: how we select negative features ('self' selects from the same feature, 'others' selects activating sequences from other features)
+    - show_max_token: shows the token with the highest activation and the position in the sentence as which it occurs if True
+    - num_completions: how many times to run inference over the model and average the results.
+    - debug: prints out the system prompt if True
+    - randomize_pos: randomizes the order of the positive examples if True
+    - seed is the seed for the random number generator to reproduce the features and examples used to test. Note the GPT3.5 response is not fully reproducible.
+
+    Run the predict_activations function on a set of random feature indices with the above hyperparameters. It saves the results to results/ before returning them.
+    """
 
     timestamp = time.time()
     np.random.seed(seed)
