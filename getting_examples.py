@@ -1,5 +1,5 @@
 import json
-from multiprocessing import Pool
+from utils import *
 import numpy as np
 import pprint
 import random
@@ -15,40 +15,8 @@ def fetch_and_parse_json(url):
         raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
 
 def fetch_feature_data(feature_id):
-        return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
-
-# def get_activation_data_for_feature(url):
-#     """
-#     STRUCTURE OF cleaned_data
-
-#     exapmles: list of examples where each example is {'maxValue': int, 'maxValueTokenIndex': int, 'tokens': list, 'values': list}
-#         tokens and values have same length where values has the activation on each token
-
-#     explanations: contains things like
-#         'author': {'country': 'US', 'name': 'gpt-3.5-turbo'},
-#         'description': 'phrases related to Q&A sessions or dialogues involving opinions and discussions',
-#         'layer': '9-res-jb',
-#         'modelId': 'gpt2-small', 
-#     """
-#     parsed_json = fetch_and_parse_json(url)
-
-#     cleaned_data = {}
-#     cleaned_data['explanations'] = parsed_json['explanations']
-#     examples = []
-#     for example in parsed_json['activations']:
-#         examples.append(
-#             {
-#                 'max_value': example['maxValue'],
-#                 'max_value_token_index': example['maxValueTokenIndex'],
-#                 'tokens': example['tokens'],
-#                 'values': example['values'],
-#             }
-#         )
-#         # assert len(example['tokens']) == len(example['values']), "Error"
-
-#     cleaned_data['examples'] = examples
-
-#     return cleaned_data
+    ## This really just has to return the parsed json with "activations" key and "explanations" key
+    return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
 
 def worker(feature, output):
     result = fetch_feature_data(feature)
@@ -93,7 +61,6 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     desc = parsed_json['explanations'][0]['description']
     highest_activation = parsed_json['activations'][0]['maxValue']
 
-
     # Asserts for positive examples
     assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} on neuronpedia.org"
     assert parsed_json['activations'][num_pos]['maxValue'] >= 0.1*highest_activation, f"The num_pos = {num_pos}th example for feature {feature_id} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is less than half the highest activation of {highest_activation} for feature {feature_id}"
@@ -123,12 +90,11 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
                 neg.append(elem)
     elif neg_type == 'others':
         np.random.seed(seed)
-        neg_features = np.random.choice(10000, size=4*int(num_neg**0.5), replace=False)
+        neg_features = np.random.choice(10000, size=6*int(num_neg**0.5), replace=False)
         if feature_id in neg_features:
             neg_features.remove(feature_id)
 
-        with Pool() as pool:
-            neg_data = pool.map(fetch_feature_data, neg_features)
+        neg_data = run_in_parallel(fetch_feature_data, neg_features)
 
         for feature_parsed_json in neg_data:
             h_a = feature_parsed_json['activations'][0]['maxValue']
