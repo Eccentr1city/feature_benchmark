@@ -66,7 +66,7 @@ def get_dict_from_example(example):
     return elem
 
 ## Could add different model or layer parameters to get more from neuronpedia
-def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = True):
+def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
     """
     Input:
     feature_id: int >= 0
@@ -107,6 +107,7 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
             pos.append(elem)
     
     if randomize_pos_examples:
+        random.seed(seed)
         random.shuffle(pos)
 
     pos = pos[:num_pos]
@@ -121,6 +122,7 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
                 elem = get_dict_from_example(example)
                 neg.append(elem)
     elif neg_type == 'others':
+        np.random.seed(seed)
         neg_features = np.random.choice(10000, size=4*int(num_neg**0.5), replace=False)
         if feature_id in neg_features:
             neg_features.remove(feature_id)
@@ -143,6 +145,7 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
                 else:
                     break
 
+    random.seed(seed)
     random.shuffle(neg)
     assert len(neg) >= num_neg, f"num_neg={num_neg} is greater than the number of negative examples available for feature {feature_id} if neg_type=self"
     neg = neg[:num_neg]
