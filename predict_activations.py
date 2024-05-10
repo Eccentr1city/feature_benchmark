@@ -23,7 +23,7 @@ def ask_model(system_prompt, user_message, num_completions, binary_class):
             n=num_completions,
             max_tokens=2 if binary_class else 5
         )
-    print('tokens:', completion.usage.prompt_tokens)
+    # print('tokens:', completion.usage.prompt_tokens)
     return completion
 
 def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
@@ -98,7 +98,7 @@ def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, s
                 resample = ask_model(system_prompt, user_message, 1, binary_class).choices[0].message.content
                 pred = parse_binary_response(resample) if binary_class else find_first_number(resample)
             if pred is None:
-                raise Exception("No valid model prediction")
+                raise Exception(f"No valid model prediction for user_message: {user_message}")
             prediction += pred
         prediction /= num_completions
         true = sentence['max_value']
@@ -142,7 +142,7 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for i, arg in enumerate(args):
-            time.sleep(2)
+            time.sleep(3)
             future = executor.submit(predict_wrapper, arg)
             futures.append(future)
             print(f"Submitted {i+1} of {num_features} tasks. Been running for {int(time.time() - timestamp)} seconds")
