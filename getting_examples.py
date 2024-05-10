@@ -54,13 +54,24 @@ def worker(feature, output):
     result = fetch_feature_data(feature)
     output.put(result)
 
+def get_dict_from_example(example):
+    elem = {
+        'max_value': example['maxValue'],
+        'max_value_token_index': example['maxValueTokenIndex'],
+        'sentence_string': ''.join(example['tokens']),
+        'max_token': example['tokens'][example['maxValueTokenIndex']],
+        'tokens': example['tokens'],
+        'values': example['values'],
+    }
+    return elem
+
 def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = False):
     """
     Input:
     feature_id: int >= 0
     num_pos: int >= 0
     num_neg: int >= 0
-    neg_type: "self" or "others"
+    neg_type: "self", "others"
 
     Output dictionary:
     pos_data: list
@@ -93,43 +104,43 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
 
     for i in pos_indices:
         example = parsed_json['activations'][i]
-        elem = {
-            'max_value': example['maxValue'],
-            'max_value_token_index': example['maxValueTokenIndex'],
-            'sentence_string': ''.join(example['tokens']),
-            'max_token': example['tokens'][example['maxValueTokenIndex']],
-            'tokens': example['tokens'],
-            'values': example['values'],
-        }
+        elem = get_dict_from_example(example)
         pos.append(elem)
     
 
     # Calculate neg
     neg = []
 
-    neg_features = np.random.choice(10000, size=3*int(num_neg**0.5), replace=False)
-    if feature_id in neg_features:
-        neg_features.remove(feature_id)
-
-    with Pool() as pool:
-        neg_data = pool.map(fetch_feature_data, neg_features)
-
-    for feature_parsed_json in neg_data:
-        h_a = feature_parsed_json['activations'][0]['maxValue']
-        for i in range(len(feature_parsed_json['activations'])):
-            example = feature_parsed_json['activations'][i]
-            if example['maxValue'] >= 0.1*h_a:
-                elem = {
-                    'max_value': 0,
-                    'sentence_string': ''.join(example['tokens']),
-                    'tokens': example['tokens'],
-                    'values': [0]*len(example['tokens']),
-                }
+    if neg_type == 'self':
+        for example in parsed_json['activations']:
+            if example['maxValue'] < 0.001*highest_activation:
+                elem = get_dict_from_example(example)
                 neg.append(elem)
-            else:
-                break
+    elif neg_type == 'others':
+        neg_features = np.random.choice(10000, size=4*int(num_neg**0.5), replace=False)
+        if feature_id in neg_features:
+            neg_features.remove(feature_id)
+
+        with Pool() as pool:
+            neg_data = pool.map(fetch_feature_data, neg_features)
+
+        for feature_parsed_json in neg_data:
+            h_a = feature_parsed_json['activations'][0]['maxValue']
+            for i in range(len(feature_parsed_json['activations'])):
+                example = feature_parsed_json['activations'][i]
+                if example['maxValue'] >= 0.1*h_a:
+                    elem = {
+                        'max_value': 0,
+                        'sentence_string': ''.join(example['tokens']),
+                        'tokens': example['tokens'],
+                        'values': [0]*len(example['tokens']),
+                    }
+                    neg.append(elem)
+                else:
+                    break
 
     random.shuffle(neg)
+    assert len(neg) >= num_neg, f"num_neg={num_neg} is greater than the number of negative examples available for feature {feature_id} if neg_type=self"
     neg = neg[:num_neg]
             
     # Return the values
