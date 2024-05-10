@@ -65,17 +65,21 @@ def get_dict_from_example(example):
     }
     return elem
 
+## Could add different model or layer parameters to get more from neuronpedia
 def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = True):
     """
     Input:
     feature_id: int >= 0
     num_pos: int >= 0
     num_neg: int >= 0
-    neg_type: "self", "others"
+    neg_type: "self" OR "others"
+    randomize_pos_examples: bool
 
     Output dictionary:
-    pos_data: list
-    neg_data: list
+    desc: str
+    pos_data: list of dicts
+    neg_data: list of dicts
+    highest_activation: float
     """
 
     # Input assertions
