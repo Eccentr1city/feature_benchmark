@@ -5,6 +5,7 @@ import json
 from multiprocessing import Pool
 import numpy as np
 from openai import OpenAI
+import os
 import pprint
 import random
 import time
@@ -114,7 +115,7 @@ def predict_wrapper(args):
     feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed = args
     return predict_activations(feature_index, feature_data, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
 
-def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42, save_location=''):
     """
     - num_features: the number of random features to test
     - show_pos and show_neg: the number of positive and negative examples to show GPT3.5, respectively.
@@ -126,6 +127,7 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
     - debug: prints out the system prompt if True
     - randomize_pos: randomizes the order of the positive examples if True
     - seed is the seed for the random number generator to reproduce the features and examples used to test. Note the GPT3.5 response is not fully reproducible.
+    - save_location: the location to save the results to in results/ if not ''
 
     Run the predict_activations function on a set of random feature indices with the above hyperparameters. It saves the results to results/ before returning them.
     """
@@ -135,8 +137,21 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
     feature_indices = [int(x) for x in np.random.choice(len(feature_data), num_features, replace=False)]
 
     args = [(feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
+    
+    predict_activations_results = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        predict_activations_results = list(executor.map(predict_wrapper, args))
+        futures = []
+        for i, arg in enumerate(args):
+            time.sleep(2)
+            future = executor.submit(predict_wrapper, arg)
+            futures.append(future)
+            print(f"Submitted {i+1} of {num_features} tasks. Been running for {int(time.time() - timestamp)} seconds")
+        for future in futures:
+            result = future.result()
+            predict_activations_results.append(result)
+
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #     predict_activations_results = list(executor.map(predict_wrapper, args))
 
     results = {
         'hyperparameters': {
@@ -157,7 +172,6 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
         'timestamp': timestamp,
     }
     for i in range(len(feature_indices)):
-        
         result_i = {
             'feature_index': feature_indices[i],
             'gpt_predictions': predict_activations_results[i][0],
@@ -165,6 +179,13 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
         }
         results['results'].append(result_i)
 
-    save_json_results(results, f'results/exp_{timestamp}.json')
+    if save_location:
+        save_dir = f'results/{save_location}'
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+    else:
+        save_dir = 'results'
+
+    save_json_results(results, f'{save_dir}/exp_{timestamp}.json')
 
     return results
