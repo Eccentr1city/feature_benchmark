@@ -1,7 +1,11 @@
 import json
+from multiprocessing import Pool
+import numpy as np
 import pprint
 import random
 import requests
+import time
+
 
 def fetch_and_parse_json(url):
     response = requests.get(url)
@@ -9,6 +13,9 @@ def fetch_and_parse_json(url):
         return json.loads(response.text)
     else:
         raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
+
+def fetch_feature_data(feature_id):
+        return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
 
 # def get_activation_data_for_feature(url):
 #     """
@@ -43,6 +50,10 @@ def fetch_and_parse_json(url):
 
 #     return cleaned_data
 
+def worker(feature, output):
+    result = fetch_feature_data(feature)
+    output.put(result)
+
 def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_examples = False):
     """
     Input:
@@ -62,25 +73,23 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
     assert isinstance(num_neg, int) and num_neg >= 0, 'Invalid num_neg'
     assert neg_type in ['self', 'others'], 'Invalid neg_type'
 
-    # Get feature data json
-    feature_url = f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}"
-    parsed_json = fetch_and_parse_json(feature_url)
-
-    # Get description and highest activation
+    # Get feature parsed_json, description and highest activation
+    parsed_json = fetch_feature_data(feature_id)
     desc = parsed_json['explanations'][0]['description']
     highest_activation = parsed_json['activations'][0]['maxValue']
 
+
     # Asserts for positive examples
     assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} on neuronpedia.org"
-
     assert parsed_json['activations'][num_pos]['maxValue'] >= 0.1*highest_activation, f"The num_pos = {num_pos}th example for feature {feature_id} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is less than half the highest activation of {highest_activation} for feature {feature_id}"
     
-    # Calculate data for positive examples 
+    # Calculate pos
     pos = []
 
     ####### IMPLEMENT THIS SOOON ############
-    # pos_indices = random.sample(range(parsed_json['activations'][num_pos]['maxValue']), num_pos) if not randomize_pos_examples else random.sample(range(num_pos), num_pos)
-    pos_indices = random.sample(range(num_pos), num_pos)
+    # pos_indices = np.random.choice(range(parsed_json['activations'][num_pos]['maxValue']), num_pos) if not randomize_pos_examples else np.random.choice(range(num_pos), num_pos)
+    pos_indices = list(range(num_pos))
+    random.shuffle(pos_indices)
 
     for i in pos_indices:
         example = parsed_json['activations'][i]
@@ -94,30 +103,41 @@ def get_pos_neg_examples(feature_id, num_pos, num_neg, neg_type, randomize_pos_e
         }
         pos.append(elem)
     
-    # Calculate data for negative examples
+
+    # Calculate neg
     neg = []
 
-    # neg_features = random.sample(range(10000), 20, replace=False)
+    neg_features = np.random.choice(10000, size=3*int(num_neg**0.5), replace=False)
+    if feature_id in neg_features:
+        neg_features.remove(feature_id)
 
-    # if feature_id in neg_features:
-    #     neg_features.remove(feature_id)
+    with Pool() as pool:
+        neg_data = pool.map(fetch_feature_data, neg_features)
 
-    # neg_features = [fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}") for feature_id in neg_features]
+    for feature_parsed_json in neg_data:
+        h_a = feature_parsed_json['activations'][0]['maxValue']
+        for i in range(len(feature_parsed_json['activations'])):
+            example = feature_parsed_json['activations'][i]
+            if example['maxValue'] >= 0.1*h_a:
+                elem = {
+                    'max_value': 0,
+                    'sentence_string': ''.join(example['tokens']),
+                    'tokens': example['tokens'],
+                    'values': [0]*len(example['tokens']),
+                }
+                neg.append(elem)
+            else:
+                break
 
-
-
-    # for i in range():
-    #     example = parsed_json['activations'][i]
-    #     elem = {
-    #         'max_value': 0,
-    #         'sentence_string': ''.join(example['tokens']),
-    #         'tokens': example['tokens'],
-    #         'values': [0]*len(example['tokens']),
-    #     }
-    #     neg.append(elem)
+    random.shuffle(neg)
+    neg = neg[:num_neg]
             
     # Return the values
     return desc, pos, neg, highest_activation
 
-# pprint.pprint(get_pos_neg_examples(1, 3, 10, 'self'))
+if __name__ == "__main__":
+    start = time.time()
+    pprint.pprint(get_pos_neg_examples(1, 3, 3, 'self'))
+    end = time.time()
+    print(f"Time: {end - start}")
 
