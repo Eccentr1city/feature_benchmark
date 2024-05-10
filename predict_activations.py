@@ -22,6 +22,7 @@ def ask_model(system_prompt, user_message, num_completions, binary_class):
             n=num_completions,
             max_tokens=2 if binary_class else 5
         )
+    print('tokens:', completion.usage.prompt_tokens)
     return completion
 
 def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
@@ -50,13 +51,13 @@ def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, s
 
     if show_pos or show_neg:
         system_prompt += f'Here are {show_pos + show_neg} examples of sentences and their corresponding activations:\n'
-        for sentence in show_sentences:
+        for i, sentence in enumerate(show_sentences):
             sentence_string = sentence['sentence_string']
             activation = sentence['max_value']
             if not binary_class:
                 activation = round(sentence['max_value'], 2)
             system_prompt += f'Example: "{sentence_string}", Activation: {activation}'
-            if show_max_token:
+            if show_max_token and i < show_pos:
                 max_token = sentence['max_token']
                 max_token_index = sentence['max_value_token_index']
                 system_prompt += f', Token with highest activation: "{max_token}" at token {max_token_index}'
