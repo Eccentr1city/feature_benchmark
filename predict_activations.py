@@ -45,7 +45,9 @@ def predict_activations(feature_index, test_pos=20, test_neg=20, show_pos=0, sho
                 activation = round(sentence['max_value'], 2)
             system_prompt += f'Example: "{sentence_string}", Activation: {activation}'
             if show_max_token:
-                system_prompt += f', Token with highest activation: "{sentence['max_token']}" at position {sentence['max_value_token_index']}'
+                max_token = sentence['max_token']
+                max_token_index = sentence['max_value_token_index']
+                system_prompt += f', Token with highest activation: "{max_token}" at token {max_token_index}'
             system_prompt += '\n'
 
     if binary_class:
@@ -120,11 +122,6 @@ def run_experiments(num_features, test_pos=20, test_neg=20, show_pos=0, show_neg
     np.random.seed(seed)
     feature_indices = [int(x) for x in np.random.choice(24000, num_features, replace=False)]
 
-    # predict_wrapper = partial(predict_activations, client=client, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
-
-    # # predict_activations_results = run_in_parallel(predict_wrapper, [(feature_index, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices])
-    # predict_activations_results = run_in_parallel(predict_wrapper, feature_indices)
-
     args = [(feature_index, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
     with concurrent.futures.ProcessPoolExecutor() as executor:
         predict_activations_results = list(executor.map(predict_wrapper, args))
@@ -159,4 +156,3 @@ def run_experiments(num_features, test_pos=20, test_neg=20, show_pos=0, show_neg
     save_json_results(results, f'results/exp_{timestamp}.json')
 
     return results
-
