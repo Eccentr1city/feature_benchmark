@@ -51,7 +51,7 @@ def get_binary_accuracy(binary_preds, plot_cdf=False, plot_distribution=False):
     if plot_cdf:
         plot_cdf_graph(accuracy, title = "CDF of accuracy")
     if plot_distribution:
-        plot_probability_distribution(accuracy, bins=np.arange(0, 1, 0.01), title = "Distribution of accuracy")
+        plot_probability_distribution(accuracy, bins=np.arange(0, 1.01, 0.01), title = "Distribution of accuracy")
     
     return accuracy
 
