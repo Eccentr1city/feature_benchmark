@@ -32,7 +32,7 @@ def plot_probability_distribution(data, bins='auto', density=True, title = "Defa
 
     # Plotting the histogram
     plt.figure(figsize=(8, 6))
-    plt.bar(bin_centers, counts*np.diff(bin_edges), align='center', width=np.diff(bin_edges), edgecolor='black', alpha=0.7)
+    plt.bar(bin_centers, counts*np.diff(bin_edges), align='center', width=np.diff(bin_edges), alpha=0.7)
     plt.xlabel('Value')
     plt.ylabel('Probability Density')
     plt.title('Probability Distribution of Data')
@@ -43,21 +43,30 @@ def plot_probability_distribution(data, bins='auto', density=True, title = "Defa
 
 # Metrics
 def get_binary_accuracy(binary_preds, plot_cdf=False, plot_distribution=False):
-    if isinstance(binary_preds[0], list):
-        accuracy = ['N/A' if len(elem) == 0 else sum([1-abs(x[0] - x[1]) for x in elem])/len(elem) for elem in binary_preds]
+    # Convert binary_preds to a numpy array
+    binary_preds = np.array(binary_preds)
+    
+    if binary_preds.ndim == 3:  # Check if binary_preds is a list of lists of pairs
+        # Calculate accuracy for each list of pairs
+        accuracies = np.array([np.nan if len(elem) == 0 else np.mean(1 - np.abs(elem[:, 0] - elem[:, 1])) for elem in binary_preds])
     else:
-        accuracy = [1-abs(x[0] - x[1]) for x in binary_preds]/len(binary_preds)
+        # Calculate the overall accuracy
+        accuracies = np.mean(1 - np.abs(binary_preds[:, 0] - binary_preds[:, 1]))
     
     if plot_cdf:
-        plot_cdf_graph(accuracy, title = "CDF of accuracy")
+        plot_cdf_graph(accuracies, title="CDF of accuracy")
     if plot_distribution:
-        plot_probability_distribution(accuracy, bins=np.arange(0, 1.01, 0.01), title = "Distribution of accuracy")
+        plot_probability_distribution(accuracies, bins=np.arange(0, 1.01, 0.01), title="Distribution of accuracy")
     
-    return accuracy
+    return accuracies
 
 def get_pos_neg_accuracy(binary_preds):
-    pos_accuracy = get_binary_accuracy([[[e[0], e[1]] for e in elem if e[0] == 0.0] for elem in binary_preds])
-    neg_accuracy = get_binary_accuracy([[[e[0], e[1]] for e in elem if e[0] == 1.0] for elem in binary_preds])
+    binary_preds = np.array(binary_preds)
+    
+    # Compute positive and negative accuracies
+    pos_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 0.0)] for elem in binary_preds])
+    neg_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 1.0)] for elem in binary_preds])
+    
     return pos_accuracy, neg_accuracy
 
 def get_accuracy_descs(json_data_binary, include_pos_neg=False, display=False):
