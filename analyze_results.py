@@ -61,11 +61,12 @@ def get_binary_accuracy(binary_preds, plot_cdf=False, plot_distribution=False):
     return accuracies
 
 def get_pos_neg_accuracy(binary_preds):
+
     binary_preds = np.array(binary_preds)
     
     # Compute positive and negative accuracies
-    pos_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 0.0)] for elem in binary_preds])
-    neg_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 1.0)] for elem in binary_preds])
+    pos_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 1.0)] for elem in binary_preds])
+    neg_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 0.0)] for elem in binary_preds])
     
     return pos_accuracy, neg_accuracy
 
@@ -76,14 +77,15 @@ def get_accuracy_descs(json_data_binary, include_pos_neg=False, display=False):
     
     if include_pos_neg:
         pos_accuracy, neg_accuracy = get_pos_neg_accuracy(binary_preds)
-        accuracy_descs = zip(accuracy, pos_accuracy, neg_accuracy, descs)
+        accuracy_descs = list(zip(accuracy, pos_accuracy, neg_accuracy, descs))
     else:
-        accuracy_descs = zip(accuracy, descs)
+        accuracy_descs = list(zip(accuracy, descs))
 
     if display:
         for elem in sorted(accuracy_descs, key=lambda x: x[0]):
             pprint.pprint(elem)
-    return sorted(accuracy_descs, key=lambda x: x[0])
+
+    return accuracy_descs
 
     
 
