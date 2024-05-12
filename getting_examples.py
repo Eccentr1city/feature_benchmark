@@ -19,40 +19,14 @@ def fetch_feature_data(layer, basis, feature_id):
     assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
     assert basis in autoencoder_bases, f"Invalid model: {basis} not in {autoencoder_bases}"
 
-    data_dir = f"{model}"
-    if basis == 'neurons':
-        data_dir += f"/{layer}"
-        skip = 32
-    else:
-        data_dir += f"/{layer}-{basis}"
-        skip = 256
-
-    filename = (feature_id//skip)*skip
-    res = feature_id % skip
-
-    # start = time.time()
+    data_dir = f"{model}-organized/{layer}" if basis == 'neurons' else f"{model}-organized/{layer}-{basis}"
     
-    with open(f"{data_dir}/{filename}-{filename + skip}.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
+    with open(f"{data_dir}/{feature_id}.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
         feature_data = json.load(f)
 
-    # end = time.time()
-    # print(f"T: {end-start}")
-
-    if int(feature_data[res]['index']) == feature_id:
-        # i = 1
-        result = feature_data[res]
-    else:
-        # i = 0
-        result = None
-        for item in feature_data:
-            # i += 1
-            if int(item['index']) == feature_id:
-                result = item
-                break
-    
-    assert result is not None, f"Feature id = {feature_id} does not exist in the data dump file {data_dir}/{filename}-{filename + skip}.json"
-    # assert int(result['index']) == feature_id, f"Feature id = {feature_id} does not match the feature id shown in the data dump: {result['index']}"
-    return result
+    # assert result is not None, f"Feature id = {feature_id} does not exist in the data dump file {data_dir}/{filename}-{filename + skip}.json"
+    assert int(feature_data['index']) == feature_id, f"Feature id = {feature_id} does not match the feature id shown in the data dump: {feature_data['index']}"
+    return feature_data
 
     ## This really just has to return the parsed json with "activations" key and "explanations" key
     # return feature_data[feature_id]
@@ -60,8 +34,6 @@ def fetch_feature_data(layer, basis, feature_id):
 
 def features_exist(layer, basis, feature_id):
     data = fetch_feature_data(layer, basis, feature_id)
-    # print(data['explanations'])
-    # print(type(data['explanations']))
     return True if data['explanations'] else False
 
 def worker(feature, output):
