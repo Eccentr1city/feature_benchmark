@@ -8,7 +8,7 @@ autoencoder_bases = [
     'neurons',
     'res_scefr-ajt',
     'res_scl-ajt',
-    'jb',
+    'res-jb',
 ]
 
 def num_layers(basis):
