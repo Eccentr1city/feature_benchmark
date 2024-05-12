@@ -90,7 +90,6 @@ def get_accuracy_descs(json_data_binary, include_pos_neg=False, display=False):
 
     
 
-
 # Losses
 def mse(data, normalize = False):
     values = ([((elem[0]-elem[1])/(elem[0] if normalize else 1))**2 for elem in data])
@@ -114,3 +113,22 @@ def analyze_data(all_data):
     plot_probability_distribution(mses, title = "Distribution of MSEs")
     plot_probability_distribution(nlls, title = "Distribution of NLL variant")
     plot_probability_distribution(l1s, title = "Distribution of l1s variant")
+
+def custom_accuracy(data):
+    eps = max([elem[0] for elem in data]) / 10
+    values = []
+    for elem in data:
+        true, pred = elem
+        ## Add eps to avoid zero case
+        true, pred = true + eps, pred + eps
+        # Scale values
+        true, pred = true ** 0.75, pred ** 0.75
+        # Calculate difference
+        difference = abs(true - pred)
+        # Take ratio
+        error = difference / max(true, pred)
+        
+        accuracy = 1 - error
+        values.append(accuracy)
+    return sum(values)/len(values)
+
