@@ -32,9 +32,13 @@ def fetch_feature_data(layer, basis, feature_id):
     # return feature_data[feature_id]
     # return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
 
-def features_exist(layer, basis, feature_id):
+def features_exist(layer, basis, feature_id, depth = 5):
     data = fetch_feature_data(layer, basis, feature_id)
-    return True if data['explanations'] else False
+    if not data['explanations']:
+        return False
+    if data['activations'][depth]['maxValue'] >= data['activations'][0]['maxValue'] * pos_classify_threshold:
+        return True
+    return False
 
 def worker(feature, output):
     result = fetch_feature_data(feature)
@@ -81,8 +85,8 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
 
     # Asserts for positive examples
     assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org"
-    assert parsed_json['activations'][num_pos]['maxValue'] >= 0.1*highest_activation, f"The num_pos = {num_pos}th example for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is 10% of the highest activation of {highest_activation} for feature {feature_id}"
-    
+    assert parsed_json['activations'][num_pos]['maxValue'] >= highest_activation * pos_classify_threshold, f"The num_pos = {num_pos}th example for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is less than {pos_classify_threshold} of the highest activation of {highest_activation} for feature {feature_id}"
+
     # Calculate pos
     pos = []
 

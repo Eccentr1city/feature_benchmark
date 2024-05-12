@@ -142,7 +142,7 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
     while len(feature_indices) < num_features:
         # f_id = int(np.random.choice(num_layers, 1, replace=False))
         f_id = random.choice(range(n_layers))
-        if f_id not in feature_indices and features_exist(layer, basis, f_id):
+        if f_id not in feature_indices and features_exist(layer, basis, f_id, depth=test_pos+show_pos):
             feature_indices.append(f_id)
 
     args = [(feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
@@ -151,7 +151,7 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for i, arg in enumerate(args):
-            time.sleep(3) # Change this number if doing significantly more than 10 test features per feature_id
+            time.sleep(4) # Change this number if doing significantly more than 10 test features per feature_id
             future = executor.submit(predict_wrapper, arg)
             futures.append(future)
             print(f"Submitted {i+1} of {num_features} tasks. Been running for {int(time.time() - timestamp)} seconds")
@@ -164,6 +164,9 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
 
     results = {
         'hyperparameters': {
+            'num_features': num_features,
+            'layer': layer,
+            'basis': basis,
             'test_pos': test_pos,
             'test_neg': test_neg,
             'show_pos': show_pos,

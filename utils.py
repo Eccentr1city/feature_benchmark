@@ -12,6 +12,8 @@ autoencoder_bases = [
     'res-jb',
 ]
 
+pos_classify_threshold = 0.05
+
 def num_layers(basis):
     return 3072 if basis=='neurons' else 24576
 
