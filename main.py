@@ -9,8 +9,6 @@ if __name__ == '__main__':
 
     for layer in autoencoder_layers:
         for basis in autoencoder_bases:
-            if layer == 2 and basis != 'res-jb':
-                continue
 
             print(f"Layer: {layer}, Basis: {basis}, Time: {time.time()}")
             results = run_experiments(
