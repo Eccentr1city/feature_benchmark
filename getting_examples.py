@@ -147,10 +147,9 @@ def sanity_checking_data_pipeline():
     
     Just spam run this and confirm the outputs look right. Vary the autoencoder basis and layer as well. Can hold seed constant for deterministic outputs.
     """
-    ## Just spam run this and confirm the outputs look right. Very the autoencoder basis and layer
     layer= random.choice(autoencoder_layers)
     basis = random.choice(autoencoder_bases)
-    neg_type='others' # Experiment with
+    neg_type='others'
     randomize_pos=True 
     num_pos=4
     num_neg=4
@@ -173,6 +172,7 @@ def sanity_checking_data_pipeline():
         print('neg ' + str(feature_index))
         for elem in neg:
             print(elem['max_value'])
+
 
 if __name__ == "__main__":
 
