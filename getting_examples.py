@@ -6,6 +6,7 @@ import random
 import requests
 import time
 
+
 def fetch_and_parse_json(url):
     print("WARNING: Querying Neuronpedia API")
     response = requests.get(url)
@@ -14,11 +15,54 @@ def fetch_and_parse_json(url):
     else:
         raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
 
-def fetch_feature_data(args):
-    feature_id, feature_data = args
+def fetch_feature_data(layer, basis, feature_id):
+    assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
+    assert basis in autoencoder_bases, f"Invalid model: {basis} not in {autoencoder_bases}"
+
+    data_dir = f"{model}"
+    if basis == 'neurons':
+        data_dir += f"/{layer}"
+        skip = 32
+    else:
+        data_dir += f"/{layer}-{basis}"
+        skip = 256
+
+    filename = (feature_id//skip)*skip
+    res = feature_id % skip
+
+    # start = time.time()
+    
+    with open(f"{data_dir}/{filename}-{filename + skip}.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
+        feature_data = json.load(f)
+
+    # end = time.time()
+    # print(f"T: {end-start}")
+
+    if int(feature_data[res]['index']) == feature_id:
+        # i = 1
+        result = feature_data[res]
+    else:
+        # i = 0
+        result = None
+        for item in feature_data:
+            # i += 1
+            if int(item['index']) == feature_id:
+                result = item
+                break
+    
+    assert result is not None, f"Feature id = {feature_id} does not exist in the data dump file {data_dir}/{filename}-{filename + skip}.json"
+    # assert int(result['index']) == feature_id, f"Feature id = {feature_id} does not match the feature id shown in the data dump: {result['index']}"
+    return result
+
     ## This really just has to return the parsed json with "activations" key and "explanations" key
-    return feature_data[feature_id]
+    # return feature_data[feature_id]
     # return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
+
+def features_exist(layer, basis, feature_id):
+    data = fetch_feature_data(layer, basis, feature_id)
+    # print(data['explanations'])
+    # print(type(data['explanations']))
+    return True if data['explanations'] else False
 
 def worker(feature, output):
     result = fetch_feature_data(feature)
@@ -36,7 +80,7 @@ def get_dict_from_example(example):
     return elem
 
 ## Could add different model or layer parameters to get more from neuronpedia
-def get_pos_neg_examples(feature_id, feature_data, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
+def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
     """
     Input:
     feature_id: int >= 0
@@ -59,7 +103,7 @@ def get_pos_neg_examples(feature_id, feature_data, num_pos, num_neg, neg_type, r
     assert neg_type in ['self', 'others'], 'Invalid neg_type'
 
     # Get feature parsed_json, description and highest activation
-    parsed_json = fetch_feature_data((feature_id, feature_data))
+    parsed_json = fetch_feature_data(layer, basis, feature_id)
     desc = parsed_json['explanations'][0]['description']
     highest_activation = parsed_json['activations'][0]['maxValue']
 
@@ -92,13 +136,13 @@ def get_pos_neg_examples(feature_id, feature_data, num_pos, num_neg, neg_type, r
                 neg.append(elem)
     elif neg_type == 'others':
         np.random.seed(seed)
-        neg_features = np.random.choice(len(feature_data) - 1, size=num_neg, replace=False)
-        for i in range(len(neg_features)):
-            if neg_features[i] >= feature_id:
-                neg_features[i] += 1
+        neg_features = []
+        while len(neg_features) < num_neg:
+            f_id = int(np.random.choice(num_layers(basis), size=1, replace=False))
+            if f_id != feature_id and f_id not in neg_features and features_exist(layer, basis, f_id):
+                neg_features.append(f_id)  
             
-            
-        neg_data = [fetch_feature_data((neg_feature, feature_data)) for neg_feature in neg_features]
+        neg_data = [fetch_feature_data(layer, basis, neg_feature) for neg_feature in neg_features]
 
         # neg_data = run_in_parallel(fetch_feature_data, [(neg_feature_id, feature_data) for neg_feature_id in neg_features])
 
@@ -136,8 +180,19 @@ if __name__ == "__main__":
     #     break
 
     # print(len(results))
-
     start = time.time()
+    total = 0
+    exist = 0
+    basis = 'res_scefr-ajt'
+    # for i in np.random.choice(num_layers(basis), 200, replace=False):
+    #     total += 1
+    #     if features_exist(2, basis, i):
+    #         exist += 1
+    #     print(exist, total, exist/total)
+
+    # print(f"Total: {total}, Exist: {exist}")
+
+    features_exist(2, basis, 100)
 
     # for i in range(100):
     #     get_pos_neg_examples(i, feature_data, 3, 3, 'others')

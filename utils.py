@@ -2,6 +2,17 @@ import json
 from multiprocessing import Pool
 import re
 
+model = 'gpt2-small'
+autoencoder_layers = [2, 6]
+autoencoder_bases = [
+    'neurons',
+    'res_scefr-ajt',
+    'res_scl-ajt',
+    'jb',
+]
+
+def num_layers(basis):
+    return 3072 if basis=='neurons' else 24576
 
 def find_first_number(text):
     # Return the first number in a string
