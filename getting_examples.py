@@ -108,8 +108,8 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     highest_activation = parsed_json['activations'][0]['maxValue']
 
     # Asserts for positive examples
-    assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} on neuronpedia.org"
-    assert parsed_json['activations'][num_pos]['maxValue'] >= 0.1*highest_activation, f"The num_pos = {num_pos}th example for feature {feature_id} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is less than half the highest activation of {highest_activation} for feature {feature_id}"
+    assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org"
+    assert parsed_json['activations'][num_pos]['maxValue'] >= 0.1*highest_activation, f"The num_pos = {num_pos}th example for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org has a maxValue of {parsed_json['activations'][num_pos]['maxValue']} which is 10% of the highest activation of {highest_activation} for feature {feature_id}"
     
     # Calculate pos
     pos = []
@@ -192,7 +192,16 @@ if __name__ == "__main__":
 
     # print(f"Total: {total}, Exist: {exist}")
 
-    features_exist(2, basis, 100)
+    # features_exist(2, basis, 100)
+    # with open(f"gpt2-small/6/160-192.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
+    #     feature_data = json.load(f)
+
+    with open(f"test.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
+        feature_data = json.load(f)
+
+    # save_json_results(feature_data[0:1], 'test.json')
+
+    # pprint.pprint(feature_data[1]['activations'][0])
 
     # for i in range(100):
     #     get_pos_neg_examples(i, feature_data, 3, 3, 'others')
