@@ -1,6 +1,6 @@
 import concurrent.futures
 from functools import partial
-from getting_examples import get_pos_neg_examples
+from getting_examples import *
 import json
 from multiprocessing import Pool
 import numpy as np
@@ -26,11 +26,11 @@ def ask_model(system_prompt, user_message, num_completions, binary_class):
     # print('tokens:', completion.usage.prompt_tokens)
     return completion
 
-def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
     # Get positive and negative examples of the feature activation
     num_pos = test_pos + show_pos
     num_neg = test_neg + show_neg
-    description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, feature_data, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos, seed=seed)
+    description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, layer, basis, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos, seed=seed)
 
     if binary_class:
         for sentence in pos_examples:
@@ -112,10 +112,10 @@ def predict_activations(feature_index, feature_data, test_pos=20, test_neg=20, s
     return predictions, extra_data
 
 def predict_wrapper(args):
-    feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed = args
-    return predict_activations(feature_index, feature_data, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
+    feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed = args
+    return predict_activations(feature_index, layer, basis, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, seed=seed)
 
-def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42, save_location=''):
+def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42, save_location=''):
     """
     - num_features: the number of random features to test
     - show_pos and show_neg: the number of positive and negative examples to show GPT3.5, respectively.
@@ -132,17 +132,26 @@ def run_experiments(num_features, feature_data, test_pos=20, test_neg=20, show_p
     Run the predict_activations function on a set of random feature indices with the above hyperparameters. It saves the results to results/ before returning them.
     """
 
+    assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
+    assert basis in autoencoder_bases, f"Invalid basis: {basis} not in {autoencoder_bases}"
+
     timestamp = time.time()
     np.random.seed(seed)
-    feature_indices = [int(x) for x in np.random.choice(len(feature_data), num_features, replace=False)]
+    n_layers = num_layers(basis)
+    feature_indices = []
+    while len(feature_indices) < num_features:
+        # f_id = int(np.random.choice(num_layers, 1, replace=False))
+        f_id = random.choice(range(n_layers))
+        if f_id not in feature_indices and features_exist(layer, basis, f_id):
+            feature_indices.append(f_id)
 
-    args = [(feature_index, feature_data, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
+    args = [(feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
     
     predict_activations_results = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for i, arg in enumerate(args):
-            time.sleep(3)
+            time.sleep(3) # Change this number if doing significantly more than 10 test features per feature_id
             future = executor.submit(predict_wrapper, arg)
             futures.append(future)
             print(f"Submitted {i+1} of {num_features} tasks. Been running for {int(time.time() - timestamp)} seconds")
