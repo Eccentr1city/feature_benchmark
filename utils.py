@@ -1,5 +1,6 @@
 import json
 from multiprocessing import Pool
+import os
 import re
 
 model = 'gpt2-small'
@@ -62,3 +63,27 @@ def print_json_tree(data, indent=''):
             for _ in range(3):
                 print("\n" + indent + '.', end='')
  
+def resave_organized_modeldata():
+    model = 'gpt2-small'
+    for layer in autoencoder_layers:
+        for basis in autoencoder_bases:
+
+            directory = f'{model}/{layer}' if basis == 'neurons' else f'{model}/{layer}-{basis}'
+            new_directory = f'{model}-organized/{layer}' if basis == 'neurons' else f'{model}-organized/{layer}-{basis}'
+
+            all_feature_data = {}
+            files_in_directory = os.listdir(directory)
+            for file in files_in_directory:
+                print(f"{directory}/{file}")
+                with open(f"{directory}/{file}", 'r') as f:
+                    feature_data = json.load(f)
+                for elem in feature_data:
+                    feature_id = int(elem['index'])
+                    elem['activations'] = sorted(elem['activations'], key=lambda example: float(example['maxValue']), reverse=True)
+                    all_feature_data[feature_id] = elem
+
+            for feature_id, feature_data in all_feature_data.items():
+                if not os.path.exists(new_directory):
+                    os.makedirs(new_directory)
+                save_json_results(feature_data, f"{new_directory}/{feature_id}.json")
+
