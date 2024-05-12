@@ -141,44 +141,15 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     # Return the values
     return desc, pos, neg, highest_activation
 
-if __name__ == "__main__":
-    # pprint.pprint(get_pos_neg_examples(1, 3, 3, 'others'))
-    # save_json_results(results, 'feat1.json')
 
-    # results = load_json_results('feat1.json')
-    # for result in results:
-    #     print(result['index'])
-    #     pprint.pprint(result)
-    #     break
+if __name__ == "__main__":
 
     # print(len(results))
     start = time.time()
     total = 0
     exist = 0
     basis = 'res_scefr-ajt'
-    # for i in np.random.choice(num_layers(basis), 200, replace=False):
-    #     total += 1
-    #     if features_exist(2, basis, i):
-    #         exist += 1
-    #     print(exist, total, exist/total)
 
-    # print(f"Total: {total}, Exist: {exist}")
-
-    # features_exist(2, basis, 100)
-    # with open(f"gpt2-small/6/160-192.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
-    #     feature_data = json.load(f)
-
-    with open(f"test.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
-        feature_data = json.load(f)
-
-    # save_json_results(feature_data[0:1], 'test.json')
-
-    # pprint.pprint(feature_data[1]['activations'][0])
-
-    # for i in range(100):
-    #     get_pos_neg_examples(i, feature_data, 3, 3, 'others')
-    # # fetch_feature_data(2)
-    # # fetch_feature_data(3)
 
     end = time.time()
     print(f"Time: {end - start}")
