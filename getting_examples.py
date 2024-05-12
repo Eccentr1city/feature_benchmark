@@ -141,6 +141,38 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     # Return the values
     return desc, pos, neg, highest_activation
 
+def sanity_checking_data_pipeline():
+    """
+    A function to sanity check that the data pipeline seems right and you're getting what you should from get_pos_neg_examples.
+    
+    Just spam run this and confirm the outputs look right. Vary the autoencoder basis and layer as well. Can hold seed constant for deterministic outputs.
+    """
+    ## Just spam run this and confirm the outputs look right. Very the autoencoder basis and layer
+    layer= random.choice(autoencoder_layers)
+    basis = random.choice(autoencoder_bases)
+    neg_type='others' # Experiment with
+    randomize_pos=True 
+    num_pos=4
+    num_neg=4
+    seed=np.random.randint(0, 10000)
+    num_features = 2
+
+    feature_indices = []
+    while len(feature_indices) < num_features:
+        feature_index = int(np.random.choice(1000, 1, replace=False)[0])
+        if feature_index not in feature_indices and features_exist(layer, basis, feature_index):
+            feature_indices.append(feature_index)
+
+    print(f"Layer: {layer}, Basis: {basis}")
+    for feature_index in feature_indices:
+        desc, pos, neg, high = get_pos_neg_examples(feature_index, layer, basis, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos, seed=seed)
+
+        print('pos ' + str(feature_index))
+        for elem in pos:
+            print(elem['max_value'])
+        print('neg ' + str(feature_index))
+        for elem in neg:
+            print(elem['max_value'])
 
 if __name__ == "__main__":
 
