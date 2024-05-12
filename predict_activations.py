@@ -177,7 +177,8 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
             'num_completions': num_completions,
             'debug': debug,
             'randomize_pos': randomize_pos,
-            'seed': seed
+            'seed': seed,
+            'pos_classify_threshold': pos_classify_threshold,
         },
         'num_features': num_features,
         'results': [],
