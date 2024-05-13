@@ -4,3 +4,4 @@ __pycache__/
 feats.json
 .DS_Store
 results/.DS_Store
+gpt2-small-organized/
