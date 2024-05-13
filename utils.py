@@ -91,5 +91,3 @@ def resave_organized_modeldata():
                     os.makedirs(new_directory)
                 save_json_results(feature_data, f"{new_directory}/{feature_id}.json", indent=0)
 
-resave_organized_modeldata()
-
