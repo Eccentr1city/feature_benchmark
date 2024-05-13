@@ -44,9 +44,12 @@ def run_in_parallel(func, args_list):
         results = pool.map(func, args_list)
     return results
 
-def save_json_results(results, filename):
+def save_json_results(results, filename, indent=4):
     with open(filename, 'w') as f:
-        json.dump(results, f, indent=4)
+        if indent:
+            json.dump(results, f, indent=indent)
+        else:
+            json.dump(results, f)
 
 def load_json_results(filename):
     with open(filename, 'r') as f:
@@ -77,8 +80,7 @@ def resave_organized_modeldata():
             files_in_directory = os.listdir(directory)
             for file in files_in_directory:
                 print(f"{directory}/{file}")
-                with open(f"{directory}/{file}", 'r') as f:
-                    feature_data = json.load(f)
+                feature_data = load_json_results(f"{directory}/{file}")
                 for elem in feature_data:
                     feature_id = int(elem['index'])
                     elem['activations'] = sorted(elem['activations'], key=lambda example: float(example['maxValue']), reverse=True)
@@ -87,5 +89,7 @@ def resave_organized_modeldata():
             for feature_id, feature_data in all_feature_data.items():
                 if not os.path.exists(new_directory):
                     os.makedirs(new_directory)
-                save_json_results(feature_data, f"{new_directory}/{feature_id}.json")
+                save_json_results(feature_data, f"{new_directory}/{feature_id}.json", indent=0)
+
+resave_organized_modeldata()
 
