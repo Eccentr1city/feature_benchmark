@@ -52,3 +52,4 @@ traitlets==5.14.3
 typing_extensions==4.11.0
 urllib3==2.2.1
 wcwidth==0.2.13
+sae-lens==2.1.2
