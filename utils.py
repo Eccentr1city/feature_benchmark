@@ -89,9 +89,5 @@ def resave_organized_modeldata():
             for feature_id, feature_data in all_feature_data.items():
                 if not os.path.exists(new_directory):
                     os.makedirs(new_directory)
-<<<<<<< HEAD
-                save_json_results(feature_data, f"{new_directory}/{feature_id}.json", indent=0)
-=======
                 save_json_results(feature_data, f"{new_directory}/{feature_id}.json", indent=0)
 
->>>>>>> 5d41a2025625cba9d544f4e93b8b06644cf33ee6
