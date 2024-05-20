@@ -1,3 +1,2 @@
-*.json filter=lfs diff=lfs merge=lfs -text
 gpt2-small/**/*.json filter=lfs diff=lfs merge=lfs -text
 gpt2-small-organized/**/*.json filter=lfs diff=lfs merge=lfs -text
