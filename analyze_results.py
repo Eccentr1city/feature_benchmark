@@ -103,6 +103,9 @@ def l1(data, normalize = True, eps = 0.1):
     values = ([((eps + abs(elem[0]-elem[1]))/((max(elem) if normalize else 1) + eps))  for elem in data])
     return sum(values)/len(values)
 
+# def auroc(data):
+
+
 # Old function
 def analyze_data(all_data):
     mses = [mse(data, normalize = False) for data in all_data]
