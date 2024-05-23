@@ -5,3 +5,5 @@ feats.json
 .DS_Store
 results/.DS_Store
 gpt2-small-organized/
+gpt2-small/
+results/
