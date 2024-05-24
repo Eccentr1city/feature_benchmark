@@ -135,13 +135,37 @@ def get_recons_loss_from_predicted_values(
 def replace_feature_activation(
     inner_acts: list[list[list[float]]],
     feature_id: int,
-    replacement: float = 0,
+    replacement: float = 0
 ) -> list[list[list[float]]]:
     """Given a set of SAE activations, replace particular feature activation with provided value"""
     replaced_inner_acts = copy.deepcopy(inner_acts)
-    for seq in range(len(replaced_inner_acts)):
+    for seq in replaced_inner_acts:
         for i in range(len(replaced_inner_acts[seq])):
-            replaced_inner_acts[seq][i][feature_id] = replacement
+            seq[i][feature_id] = replacement
+    return replaced_inner_acts
+
+
+def replace_max_feature_activation(
+    inner_acts: list[list[list[float]]],
+    feature_id: int,
+    max_indices: list[int],
+    replacements: list[float]
+) -> list[list[list[float]]]:
+    replaced_inner_acts = copy.deepcopy(inner_acts)
+    for seq, max_index, replacement in zip(replaced_inner_acts, max_indices, replacements):
+        seq[max_index][feature_id] = replacement
+    return replaced_inner_acts
+
+
+def replace_sequence_feature_activation(
+    inner_acts: list[list[list[float]]],
+    feature_id: int,
+    replacements: list[list[float]]
+) -> list[list[list[float]]]:
+    replaced_inner_acts = copy.deepcopy(inner_acts)
+    for seq, replacement in zip(replaced_inner_acts, replacements):
+        for i in range(len(seq)):
+            seq[i][feature_id] = replacement[i]
     return replaced_inner_acts
 
 
