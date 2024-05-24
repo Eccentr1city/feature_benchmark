@@ -2,6 +2,7 @@ import json
 from multiprocessing import Pool
 import os
 import re
+import shutil
 
 pos_classify_threshold = 0.05
 
@@ -100,3 +101,22 @@ def resave_organized_modeldata(model = 'gpt2-small',
                     os.makedirs(new_directory)
                 save_json_results(feature_data, f"{new_directory}/{feature_id}.json", indent=0)
 
+
+def copy_files_by_list(number_list, source_directory, target_directory):
+    '''Create a new directory with a subset of specified features'''
+    # Ensure target directory exists
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    
+    for number in number_list:
+        filename = f"{number}.json"
+        source_path = os.path.join(source_directory, filename)
+        target_path = os.path.join(target_directory, filename)
+        
+        # Check if the file exists in the source directory
+        if os.path.exists(source_path):
+            # Copy the file to the target directory
+            shutil.copy2(source_path, target_path)
+            print(f"Copied {filename} to {target_directory}")
+        else:
+            print(f"{filename} does not exist in the source directory")

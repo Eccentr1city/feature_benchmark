@@ -137,13 +137,7 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
 
     timestamp = time.time()
     np.random.seed(seed)
-    n_layers = num_layers(basis)
-    feature_indices = []
-    while len(feature_indices) < num_features:
-        # f_id = int(np.random.choice(num_layers, 1, replace=False))
-        f_id = random.choice(range(n_layers))
-        if f_id not in feature_indices and features_exist(layer, basis, f_id, depth=test_pos+show_pos):
-            feature_indices.append(f_id)
+    feature_indices = np.random.choice(num_layers(basis), size=num_features, replace=False)
 
     args = [(feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, neg_type, show_max_token, num_completions, debug, randomize_pos, seed) for feature_index in feature_indices]
     
