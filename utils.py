@@ -3,11 +3,15 @@ from multiprocessing import Pool
 import os
 import re
 import shutil
+import ast
+
 
 pos_classify_threshold = 0.05
 
+
 def num_layers(basis):
     return 3072 if basis=='neurons' else 24576
+
 
 def find_first_number(text):
     # Return the first number in a string
@@ -18,6 +22,7 @@ def find_first_number(text):
         # raise Exception("No valid model prediction")
         return None 
 
+
 def parse_binary_response(text):
     # Search for the strings "high" and "low" and return whichever occurs first
     match = re.search(r'\b(high|low)\b', text, flags=re.IGNORECASE)
@@ -26,6 +31,44 @@ def parse_binary_response(text):
     else:
         # raise Exception("No valid model prediction")
         return None 
+    
+
+# Probably deprecated, use simple instead
+def extract_number_list(text, expected_length):
+    # Regex updated to include negative numbers
+    match = re.search(r'\[((\s*-?\d+(\.\d+)?)\s*,)*(\s*-?\d+(\.\d+)?\s*)\]', text)
+    
+    if match:
+        try:
+            number_list = ast.literal_eval(match.group(0))
+            if isinstance(number_list, list) and all(isinstance(n, (int, float)) for n in number_list) and len(number_list) == expected_length:
+                return number_list
+        except:
+            pass
+    
+    # Return None if no list is found or an exception occurs
+    return None
+
+# Use this one
+def simple_extract_number_list(text, expected_length, pad=0):
+    # Improved regex to correctly capture numbers with optional negatives and decimals
+    numbers = re.findall(r'-?\b\d+\.\d+|-?\b\d+', text)
+    
+    # Convert found strings to floats
+    numbers = [float(num) for num in numbers]
+    
+    # Check if the list has the expected length
+    if len(numbers) >= expected_length:
+        return numbers[:expected_length]
+    elif len(numbers) >= expected_length - pad:
+        print(f'WARNING: padding prediction with {expected_length - len(numbers)} zeros')
+        while len(numbers) < expected_length:
+            numbers.append(0)
+        assert len(numbers) == expected_length
+        return numbers
+    else:
+        return None
+
 
 def run_in_parallel(func, args_list):
     """
@@ -36,6 +79,7 @@ def run_in_parallel(func, args_list):
         results = pool.map(func, args_list)
     return results
 
+
 def save_json_results(results, filename, indent=4):
     with open(filename, 'w') as f:
         if indent:
@@ -43,9 +87,11 @@ def save_json_results(results, filename, indent=4):
         else:
             json.dump(results, f)
 
+
 def load_json_results(filename):
     with open(filename, 'r') as f:
         return json.load(f)
+
 
 def print_json_tree(data, indent=''):
     if isinstance(data, dict):
@@ -60,6 +106,7 @@ def print_json_tree(data, indent=''):
             for _ in range(3):
                 print("\n" + indent + '.', end='')
 
+
 def elementwise_difference(list1, list2):
     if not list1 or not list2 or len(list1) != len(list2):
         raise ValueError("Both input lists must have the same shape")
@@ -72,6 +119,7 @@ def elementwise_difference(list1, list2):
     
     return result
  
+
 def resave_organized_modeldata(model = 'gpt2-small',
                                autoencoder_layers = [2, 6],
                                autoencoder_bases = [

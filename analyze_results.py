@@ -61,6 +61,15 @@ def get_binary_accuracy(binary_preds, plot_cdf=False, plot_distribution=False):
     
     return accuracies
 
+# TODO: EASY MODE for the model (no magnitude or location prediction):
+# For each binary prediction:
+# If true positive or true negative, leave activations unchanged. 
+# If false positive, mean-ablate the feature (mean among pos examples); if false negative, zero-ablate the feature
+# Measure the change in loss
+def easy_binary_pred_loss(binary_preds):
+    return
+
+
 def get_pos_neg_accuracy(binary_preds):
 
     binary_preds = np.array(binary_preds)
@@ -70,6 +79,7 @@ def get_pos_neg_accuracy(binary_preds):
     neg_accuracy = get_binary_accuracy([elem[np.where(elem[:, 0] == 0.0)] for elem in binary_preds])
     
     return pos_accuracy, neg_accuracy
+
 
 def get_accuracy_descs(json_data_binary, include_pos_neg=False, display=False):
     binary_preds = [json_data_binary['results'][i]['gpt_predictions'] for i in range(len(json_data_binary['results']))]
@@ -104,34 +114,3 @@ def l1(data, normalize = True, eps = 0.1):
     return sum(values)/len(values)
 
 # def auroc(data):
-
-
-# Old function
-def analyze_data(all_data):
-    mses = [mse(data, normalize = False) for data in all_data]
-    nlls = [nll_variant(data) for data in all_data]
-    l1s = [l1(data, normalize = True) for data in all_data]
-
-    print('l1s', sorted(l1s))
-    plot_probability_distribution(mses, title = "Distribution of MSEs")
-    plot_probability_distribution(nlls, title = "Distribution of NLL variant")
-    plot_probability_distribution(l1s, title = "Distribution of l1s variant")
-
-def custom_accuracy(data):
-    eps = max([elem[0] for elem in data]) / 10
-    values = []
-    for elem in data:
-        true, pred = elem
-        ## Add eps to avoid zero case
-        true, pred = true + eps, pred + eps
-        # Scale values
-        true, pred = true ** 0.75, pred ** 0.75
-        # Calculate difference
-        difference = abs(true - pred)
-        # Take ratio
-        error = difference / max(true, pred)
-        
-        accuracy = 1 - error
-        values.append(accuracy)
-    return sum(values)/len(values)
-

@@ -23,6 +23,7 @@ def fetch_and_parse_json(url):
     else:
         raise Exception(f"Failed to fetch data: {response.status_code}... Maybe the internet is down or your feature id is not valid?")
 
+
 def fetch_feature_data(layer, basis, feature_id):
     assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
     assert basis in autoencoder_bases, f"Invalid model: {basis} not in {autoencoder_bases}"
@@ -40,6 +41,7 @@ def fetch_feature_data(layer, basis, feature_id):
     # return feature_data[feature_id]
     # return fetch_and_parse_json(f"https://www.neuronpedia.org/api/feature/gpt2-small/9-res-jb/{feature_id}")
 
+
 def features_exist(layer, basis, feature_id, depth = 5):
     data = fetch_feature_data(layer, basis, feature_id)
     if not data['explanations']:
@@ -48,9 +50,11 @@ def features_exist(layer, basis, feature_id, depth = 5):
         return True
     return False
 
+
 def worker(feature, output):
     result = fetch_feature_data(feature)
     output.put(result)
+
 
 def get_dict_from_example(example):
     elem = {
@@ -63,8 +67,9 @@ def get_dict_from_example(example):
     }
     return elem
 
+
 ## Could add different model or layer parameters to get more from neuronpedia
-def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, randomize_pos_examples = True, seed=42):
+def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, randomize_pos_examples = True):
     """
     Input:
     feature_id: int >= 0
@@ -81,7 +86,7 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     """
 
     # Input assertions
-    assert isinstance(feature_id, int) and feature_id >= 0, 'Invalid feature_id'
+    assert isinstance(feature_id, int) and feature_id >= 0, f'Invalid feature_id {feature_id}'
     assert isinstance(num_pos, int) and num_pos >= 0, 'Invalid num_pos'
     assert isinstance(num_neg, int) and num_neg >= 0, 'Invalid num_neg'
     assert neg_type in ['self', 'others'], 'Invalid neg_type'
@@ -104,7 +109,6 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
             pos.append(elem)
     
     if randomize_pos_examples:
-        random.seed(seed)
         random.shuffle(pos)
 
     pos = pos[:num_pos]
@@ -119,7 +123,6 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
                 elem = get_dict_from_example(example)
                 neg.append(elem)
     elif neg_type == 'others':
-        np.random.seed(seed)
         neg_features = []
         while len(neg_features) < num_neg:
             f_id = int(np.random.choice(num_layers(basis), size=1, replace=False))
@@ -145,13 +148,13 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
                 else:
                     break
 
-    random.seed(seed)
     random.shuffle(neg)
     assert len(neg) >= num_neg, f"num_neg={num_neg} is greater than the number of negative examples available for feature {feature_id} if neg_type=self"
     neg = neg[:num_neg]
             
     # Return the values
     return desc, pos, neg, highest_activation
+
 
 def sanity_checking_data_pipeline():
     """
