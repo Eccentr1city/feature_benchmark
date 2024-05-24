@@ -26,7 +26,7 @@ def ask_model(system_prompt, user_message, num_completions, binary_class):
     # print('tokens:', completion.usage.prompt_tokens)
     return completion
 
-def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
+def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, all_tokens=False, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42):
     # Get positive and negative examples of the feature activation
     num_pos = test_pos + show_pos
     num_neg = test_neg + show_neg

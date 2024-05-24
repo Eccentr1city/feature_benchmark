@@ -10,6 +10,7 @@ from typing import Any, Optional, TypedDict
 from functools import partial
 from datasets import Dataset
 import os
+import copy
 
 
 def zero_ablate_hook(activations: torch.Tensor, hook: Any):
@@ -129,6 +130,19 @@ def get_recons_loss_from_predicted_values(
         losses.extend(loss_per_token)
 
     return losses
+
+
+def replace_feature_activation(
+    inner_acts: list[list[list[float]]],
+    feature_id: int,
+    replacement: float = 0,
+) -> list[list[list[float]]]:
+    """Given a set of SAE activations, replace particular feature activation with provided value"""
+    replaced_inner_acts = copy.deepcopy(inner_acts)
+    for seq in range(len(replaced_inner_acts)):
+        for i in range(len(replaced_inner_acts[seq])):
+            replaced_inner_acts[seq][i][feature_id] = replacement
+    return replaced_inner_acts
 
 
 def get_vanilla_loss(

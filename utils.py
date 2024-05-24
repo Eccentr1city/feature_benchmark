@@ -3,15 +3,6 @@ from multiprocessing import Pool
 import os
 import re
 
-model = 'gpt2-small'
-autoencoder_layers = [2, 6]
-autoencoder_bases = [
-    'neurons',
-    'res_scefr-ajt',
-    'res_scl-ajt',
-    'res-jb',
-]
-
 pos_classify_threshold = 0.05
 
 def num_layers(basis):
@@ -67,8 +58,26 @@ def print_json_tree(data, indent=''):
             print_json_tree(data[0], indent + '    ')
             for _ in range(3):
                 print("\n" + indent + '.', end='')
+
+def elementwise_difference(list1, list2):
+    if not list1 or not list2 or len(list1) != len(list2):
+        raise ValueError("Both input lists must have the same shape")
+
+    result = []
+    for sublist1, sublist2 in zip(list1, list2):
+        if len(sublist1) != len(sublist2):
+            raise ValueError("Both input lists must have the same shape")
+        result.append([b - a for a, b in zip(sublist1, sublist2)])
+    
+    return result
  
-def resave_organized_modeldata():
+def resave_organized_modeldata(model = 'gpt2-small',
+                               autoencoder_layers = [2, 6],
+                               autoencoder_bases = [
+                                    'neurons',
+                                    'res_scefr-ajt',
+                                    'res_scl-ajt',
+                                    'res-jb',]):
     model = 'gpt2-small'
     for layer in autoencoder_layers:
         for basis in autoencoder_bases:

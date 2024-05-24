@@ -6,6 +6,14 @@ import random
 import requests
 import time
 
+model = 'gpt2-small'
+autoencoder_layers = [2, 6]
+autoencoder_bases = [
+    'neurons',
+    'res_scefr-ajt',
+    'res_scl-ajt',
+    'res-jb',]
+
 
 def fetch_and_parse_json(url):
     print("WARNING: Querying Neuronpedia API")
