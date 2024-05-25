@@ -98,7 +98,6 @@ def get_accuracy_descs(json_data_binary, include_pos_neg=False, display=False):
 
     return accuracy_descs
 
-    
 
 # Losses
 def mse(data, normalize = False):

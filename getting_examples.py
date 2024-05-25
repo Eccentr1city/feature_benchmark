@@ -6,7 +6,7 @@ import random
 import requests
 import time
 
-model = 'gpt2-small'
+model_name = 'gpt2-small'
 autoencoder_layers = [2, 6]
 autoencoder_bases = [
     'neurons',
@@ -28,7 +28,7 @@ def fetch_feature_data(layer, basis, feature_id):
     assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
     assert basis in autoencoder_bases, f"Invalid model: {basis} not in {autoencoder_bases}"
 
-    data_dir = f"{model}-organized/{layer}" if basis == 'neurons' else f"{model}-organized/{layer}-{basis}"
+    data_dir = f"{model_name}-organized/{layer}" if basis == 'neurons' else f"{model_name}-organized/{layer}-{basis}"
     
     with open(f"{data_dir}/{feature_id}.json", 'r') as f: #This is the step that takes a while (66 / 75 ms)
         feature_data = json.load(f)
@@ -156,6 +156,80 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     return desc, pos, neg, highest_activation
 
 
+def recompute_activations(file_path, model, sae):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    
+    strings = []
+    activations = data['activations']
+    index = int(data['index'])
+    
+    for activation in activations:
+        strings.append(''.join(activation['tokens']))
+    
+    _, inner, _ = get_sae_activations(model, sae, strings)
+    
+    # Add recomputed values for current feature back to the JSON structure
+    for i, activation in enumerate(activations):
+        activation['recomputedValues'] = [x[index] for x in inner[i]]
+    
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+
+
+def sort_activations(file_path, pos_classify_threshold):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    
+    posActivations = []
+    negSelfActivations = []
+    maxActApprox = data['maxActApprox']
+    threshold = pos_classify_threshold * maxActApprox
+
+    # Sort activations into posActivations and negSelfActivations
+    for activation in data['activations']:
+        if sum(activation['recomputedValues']) > threshold:
+            posActivations.append(activation)
+        else:
+            negSelfActivations.append(activation)
+    
+    # Compute the averagePosActivation
+    if posActivations:
+        # Compute the elementwise average of recomputed positive activations (for mean-ablating)
+        max_length = max(len(act['recomputedValues']) for act in posActivations)
+        avg_matrix = np.array([np.pad(act['recomputedValues'], (0, max_length - len(act['recomputedValues'])), 'constant') for act in posActivations])
+        averagePosActivation = np.mean(avg_matrix, axis=0).tolist()
+    else:
+        averagePosActivation = []
+
+    # Add updated data back to the JSON file
+    data['posActivations'] = posActivations
+    data['negSelfActivations'] = negSelfActivations
+    data['averagePosActivation'] = averagePosActivation
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+    
+    return len(posActivations), len(negSelfActivations)
+
+
+# TODO: precompute a set of negative examples from other features and add them to the JSON files in the subset folder
+def other_negative_activations(file_path, other_directory, model, sae):
+    return
+
+
+def recompute_directory_activations(directory, model, sae, recompute=True, re_sort=True):
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):
+            file_path = os.path.join(directory, filename)
+
+            if recompute:
+                recompute_activations(file_path, model, sae)
+                print(f'{filename} updated with recomputed activations')
+            if re_sort:
+                pos, self_neg = sort_activations(file_path, pos_classify_threshold)
+                print(f'{filename} sorted into {pos} positive and {self_neg} self_negative activations')
+
+
 def sanity_checking_data_pipeline():
     """
     A function to sanity check that the data pipeline seems right and you're getting what you should from get_pos_neg_examples.
@@ -187,17 +261,3 @@ def sanity_checking_data_pipeline():
         print('neg ' + str(feature_index))
         for elem in neg:
             print(elem['max_value'])
-
-
-if __name__ == "__main__":
-
-    # print(len(results))
-    start = time.time()
-    total = 0
-    exist = 0
-    basis = 'res_scefr-ajt'
-
-
-    end = time.time()
-    print(f"Time: {end - start}")
-
