@@ -74,11 +74,11 @@ def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, s
             system_prompt += '\n'
 
     if binary_class:
-        system_prompt += f'\nYou must predict the activation on a new sentence based off of the provided description. If the description matches the provided sentence, the activation will be high, while if it does not match the activation will low. \nYou MUST respond with either "high" or "low" and NO OTHER content.'
+        system_prompt += f'\nYou must predict the activation on a new sentence based off of the provided description. The activation will be zero (low) for almost all sentences. If the description exactly matches the provided sentence, the activation will be high, while if it does not match the activation will low. \nYou MUST respond with either "high" or "low" and NO OTHER content.'
     elif all_tokens:
-        system_prompt += f'\nThe value of the highest activation on the dataset is {highest_activation:.2f}. Most tokens have an activation of zero, and a few tokens that match the provided description may have higher activations (somewhere between 0 and {highest_activation:.2f}). You must predict the activations for each token a new sentence based off of the provided description. \nYou MUST respond with a list of numbers, one for each token in the sequence, and NO OTHER content.'
+        system_prompt += f'\nThe value of the highest activation on the dataset is {highest_activation:.2f}. Almost all tokens in almost all sequences have an activation of zero, while a few tokens that exactly match the provided description may have higher activations (somewhere between 0 and {highest_activation:.2f}). You must predict the activations for each token a new sentence based off of the provided description. \nYou MUST respond with a list of numbers, one for each token in the sequence, and NO OTHER content.'
     else:
-        system_prompt += f'\nThe value of the highest activation on the dataset is {highest_activation:.2f}. You must predict the activation on a new sentence based off of the provided description. If the description matches the provided sentence, the activation may be closer to {highest_activation:.2f}, while if it does not match the activation will be nearly 0. \nYou MUST respond with ONLY a number and NO OTHER content.'
+        system_prompt += f'\nThe value of the highest activation on the dataset is {highest_activation:.2f}. You must predict the activation on a new sentence based off of the provided description. The activation will be zero  for almost all sequences. If the description exactly matches the provided sentence, the activation may be higher, between 0 and {highest_activation:.2f}, while if it does not match the activation will be 0 or nearly 0. \nYou MUST respond with ONLY a number and NO OTHER content.'
 
     predictions = []
 
