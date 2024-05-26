@@ -13,7 +13,7 @@ from utils import *
 
 client = OpenAI()
 
-def ask_model(system_prompt, user_message, num_completions, binary_class, all_tokens):
+def ask_model(model, system_prompt, user_message, num_completions, binary_class, all_tokens):
     if binary_class:
         max_tokens = 2
     elif all_tokens:
@@ -21,7 +21,7 @@ def ask_model(system_prompt, user_message, num_completions, binary_class, all_to
     else:
         max_tokens = 5
     completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
@@ -32,11 +32,16 @@ def ask_model(system_prompt, user_message, num_completions, binary_class, all_to
     # print('tokens:', completion.usage.prompt_tokens)
     return completion
 
-def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, all_tokens=False, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True):
-    # Get positive and negative examples of the feature activation
+def predict_activations(location, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, all_tokens=False, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, model="gpt-3.5-turbo"):
     num_pos = test_pos + show_pos
     num_neg = test_neg + show_neg
-    description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, layer, basis, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos)
+
+    # Get positive and negative examples of the feature activation
+    if isinstance(location, tuple):
+        feature_index, layer, basis = location
+        description, pos_examples, neg_examples, highest_activation = get_pos_neg_examples(feature_index, layer, basis, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos)
+    else:
+        description, pos_examples, neg_examples, highest_activation = get_pos_neg_from_file(location, num_pos=num_pos, num_neg=num_neg, neg_type=neg_type, randomize_pos_examples=randomize_pos)
 
     if binary_class:
         for sentence in pos_examples:
@@ -112,7 +117,7 @@ def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, s
                 user_message += f'\n{token}'
         user_message += f'\nRemember, the english description of the feature is: "{description}"'
        
-        completion = ask_model(system_prompt, user_message, num_completions, binary_class, all_tokens)
+        completion = ask_model(model, system_prompt, user_message, num_completions, binary_class, all_tokens)
         
         if debug:
             print(user_message)
@@ -131,7 +136,7 @@ def predict_activations(feature_index, layer, basis, test_pos=20, test_neg=20, s
 
             if pred is None:
                 print('WARNING: Resampling')
-                resample = ask_model(system_prompt, user_message, 1, binary_class, all_tokens).choices[0].message.content
+                resample = ask_model(model, system_prompt, user_message, 1, binary_class, all_tokens).choices[0].message.content
                 pred = parse_reponse(resample, len(tokens), 3)
             if pred is None:
                 raise Exception(f"No valid model prediction for user_message: {user_message}")

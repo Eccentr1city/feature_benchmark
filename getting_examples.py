@@ -58,13 +58,17 @@ def worker(feature, output):
 
 def get_dict_from_example(example):
     elem = {
-        'max_value': example['maxValue'],
-        'max_value_token_index': example['maxValueTokenIndex'],
         'sentence_string': ''.join(example['tokens']),
-        'max_token': example['tokens'][example['maxValueTokenIndex']],
         'tokens': example['tokens'],
-        'values': example['values'],
     }
+    if 'recomputedValues' in example:
+        elem['values'] = example['recomputedValues'][1:]
+    else:
+        elem['values'] = example['values']
+    if 'maxValueTokenIndex' in example:
+        elem['max_value_token_index'] = example['maxValueTokenIndex']
+        elem['max_token'] = example['tokens'][example['maxValueTokenIndex']],
+    elem['max_value'] = max(elem['values'])
     return elem
 
 
@@ -93,8 +97,8 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
 
     # Get feature parsed_json, description and highest activation
     parsed_json = fetch_feature_data(layer, basis, feature_id)
-    desc = parsed_json['explanations'][0]['description']
-    highest_activation = parsed_json['activations'][0]['maxValue']
+    desc = parsed_json['explanations'][-1]['description']
+    highest_activation = parsed_json['maxActApprox']
 
     # Asserts for positive examples
     assert len(parsed_json['activations']) >= num_pos, f"num_pos={num_pos} is greater than number of activations for feature {feature_id} in layer {layer} with basis {basis} on neuronpedia.org"
@@ -153,6 +157,27 @@ def get_pos_neg_examples(feature_id, layer, basis, num_pos, num_neg, neg_type, r
     neg = neg[:num_neg]
             
     # Return the values
+    return desc, pos, neg, highest_activation
+
+# If we have precomputed positive and negative examples in a file, use this one
+def get_pos_neg_from_file(file_path, num_pos, num_neg, neg_type, randomize_pos_examples = True):
+    assert neg_type in ['self', 'others'], 'Invalid neg_type'
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+
+    highest_activation = data['maxActApprox']
+    desc = data['explanations'][-1]['description']
+    if len(data['posActivations']) < num_pos:
+        print('WARNING: Insufficient positive activations')
+    if randomize_pos_examples:
+        pos_examples = random.sample(data['posActivations'], max(num_pos, len(data['posActivations'])))
+    else:
+        pos_examples = data['posActivations'][:num_pos]
+    pos = [get_dict_from_example(p) for p in pos_examples]
+    neg_key = 'negSelfActivations' if neg_type == 'self' else 'negOtherActivations'
+    neg_examples = random.sample(data[neg_key], max(num_pos, len(data[neg_key])))
+    neg = [get_dict_from_example(p) for p in neg_examples]
+    
     return desc, pos, neg, highest_activation
 
 
