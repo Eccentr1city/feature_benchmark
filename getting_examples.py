@@ -212,12 +212,53 @@ def sort_activations(file_path, pos_classify_threshold):
     return len(posActivations), len(negSelfActivations)
 
 
-# TODO: precompute a set of negative examples from other features and add them to the JSON files in the subset folder
-def other_negative_activations(file_path, other_directory, model, sae):
+# Precompute a set of negative examples stolen from other features and add them to the JSON files in the subset folder
+def other_negative_activations(file_path, other_directory, model, sae, num_neg):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    feature_id = int(data['index'])
+    max_act = data['maxActApprox']
+    negOtherActivations = []
+
+    files = [f for f in os.listdir(other_directory) if os.path.isfile(os.path.join(other_directory, f))]
+    files.remove(os.path.basename(file_path))
+    neg_features = random.sample(files, min(num_neg, len(files)))
+    for nf in neg_features:
+        files.remove(nf)
+    
+    for i, neg_feature in enumerate(neg_features):
+        negative = False
+        while not negative:
+            with open(f"{other_directory}/{neg_feature}", 'r') as f:
+                neg_data = json.load(f)
+            neg_act = random.sample(neg_data['activations'][:10], 1)[0]
+            neg_string = ''.join(neg_act['tokens'])
+            _, inner, _ = get_sae_activations(model, sae, [neg_string])
+            recomputed = [x[feature_id] for x in inner[0]]
+            if sum(recomputed) < 0.01 * max_act:
+                negative = True
+            else:
+                print('WARNING: Resampling negative activation')
+                neg_feature = random.sample(files, 1)[0]
+                files.remove(neg_feature)
+
+            neg_act['recomputedValues'] = recomputed
+            del neg_act['values']
+            del neg_act['maxValue']
+            del neg_act['minValue']
+            del neg_act['maxValueTokenIndex']
+            del neg_act['lossValues']
+            negOtherActivations.append(neg_act)
+    
+    # Add updated data back to the JSON file
+    data['negOtherActivations'] = negOtherActivations
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+                
     return
 
 
-def recompute_directory_activations(directory, model, sae, recompute=True, re_sort=True):
+def recompute_directory_activations(directory, other_directory, model, sae, recompute=True, re_sort=True, num_neg_others=10):
     for filename in os.listdir(directory):
         if filename.endswith('.json'):
             file_path = os.path.join(directory, filename)
@@ -228,6 +269,10 @@ def recompute_directory_activations(directory, model, sae, recompute=True, re_so
             if re_sort:
                 pos, self_neg = sort_activations(file_path, pos_classify_threshold)
                 print(f'{filename} sorted into {pos} positive and {self_neg} self_negative activations')
+            if num_neg_others:
+                other_negative_activations(file_path, other_directory, model, sae, num_neg_others)
+                print(f'{filename} gathered {num_neg_others} other_negative activations')
+
 
 
 def sanity_checking_data_pipeline():
