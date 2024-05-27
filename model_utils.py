@@ -11,6 +11,7 @@ from functools import partial
 from datasets import Dataset
 import os
 import copy
+from sae_lens import SparseAutoencoder
 
 
 def zero_ablate_hook(activations: torch.Tensor, hook: Any):
