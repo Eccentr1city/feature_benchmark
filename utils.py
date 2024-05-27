@@ -63,7 +63,8 @@ def simple_extract_number_list(text, expected_length, pad=0):
     if len(numbers) >= expected_length:
         return numbers[:expected_length]
     elif len(numbers) >= expected_length - pad:
-        print(f'WARNING: padding prediction with {expected_length - len(numbers)} zeros')
+        if expected_length - len(numbers) > 1:
+            print(f'WARNING: padding prediction with {expected_length - len(numbers)} zeros')
         while len(numbers) < expected_length:
             numbers.append(0)
         assert len(numbers) == expected_length
@@ -82,7 +83,7 @@ def run_in_parallel(func, args_list):
     return results
 
 
-def save_json_results(results, filename, indent=4):
+def save_json_results(results, filename, indent=None):
     with open(filename, 'w') as f:
         if indent:
             json.dump(results, f, indent=indent)

@@ -2,6 +2,61 @@ from utils import *
 import matplotlib.pyplot as plt
 import numpy as np
 import pprint
+from tqdm import tqdm
+
+
+# Take experiment file, compute the loss change when using predicted activations,
+# and add it back to the file
+# Get model's loss on strings
+def get_experiment_losses(experiment_file, model, sae):
+    with open(experiment_file, 'r') as file:
+        data = json.load(file)
+    
+    for feature in tqdm(data['results']):
+        feat_id = feature['feature_index']
+        for example in feature['gpt_predictions']:
+            sentence_string = [example['sentence_string']]
+
+            _, inner_acts, _ = get_sae_activations(model, sae, sentence_string)
+            
+            # Model loss
+            regular_losses = get_vanilla_loss(model, sae, sentence_string)
+            example['regular_losses'] = regular_losses[0]
+
+            # Loss using SAE reconstructed activations
+            sae_losses = get_vanilla_loss(model, sae, sentence_string, with_sae_replacement=True)
+            example['sae_losses'] = sae_losses[0]
+
+            # Loss with all features ablated
+            precomputed_zeros = [[[0.0] * len(l) for l in seq] for seq in inner_acts]
+            zeros_losses = get_recons_loss_from_predicted_values(model, sae, sentence_string, precomputed_zeros)
+            example['ablated_sae_losses'] = zeros_losses[0]
+
+            # Loss with specific feature ablated
+            ablated_inner_acts = replace_feature_activation(inner_acts, feat_id, 0)
+            ablated_feature_losses = get_recons_loss_from_predicted_values(model, sae, sentence_string, ablated_inner_acts)
+            example['ablated_feature_losses'] = ablated_feature_losses[0]
+
+            # Loss using predicted activations
+            
+            replacements = [example['prediction']]
+            assert len(inner_acts[0]) == len(replacements[0]), f'IS this the problem?? {len(inner_acts[0])}, {len(replacements[0])}'
+            replaced_inner_acts = replace_sequence_feature_activation(inner_acts, feat_id, replacements)
+            replaced_sae_losses = get_recons_loss_from_predicted_values(model, sae, sentence_string, replaced_inner_acts)
+            example['predicted_feature_losses'] = replaced_sae_losses[0]
+
+    with open(experiment_file, 'w') as file:
+        json.dump(data, file)
+
+
+def analyze_loss_change(experiment_file):
+    # make some plots maybe?
+    # Average total loss change across sequece per feature
+    # Average loss change per token per feature
+    return
+
+# === OLD ===
+# Most of the stuff below here is not needed anymore
 
 # Plots
 def plot_cdf_graph(data, title = "Default Title"):

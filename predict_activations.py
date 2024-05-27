@@ -135,11 +135,16 @@ def predict_activations(location, test_pos=20, test_neg=20, show_pos=0, show_neg
                 print('Parsed response:', pred)
 
             if pred is None:
-                print('WARNING: Resampling')
+                print('Warning: Resampling')
                 resample = ask_model(model, system_prompt, user_message, 1, binary_class, all_tokens).choices[0].message.content
                 pred = parse_reponse(resample, len(tokens), 3)
             if pred is None:
-                raise Exception(f"No valid model prediction for user_message: {user_message}")
+                print('WARNING: Resampling twice')
+                resample = ask_model(model, system_prompt, user_message, 1, binary_class, all_tokens).choices[0].message.content
+                pred = parse_reponse(resample, len(tokens), 5)
+            if pred is None:
+                print(f'CRITICAL WARNING: No valid model prediction for "{sentence_string}" in {location}')
+                pred = [0]*len(tokens)
             if all_tokens:
                 for i in range(len(pred)):
                     prediction[i] += pred[i]
@@ -156,18 +161,20 @@ def predict_activations(location, test_pos=20, test_neg=20, show_pos=0, show_neg
             true = 1 if sentence['max_value'] == 'high' else 0
         elif all_tokens:
             true = sentence['values']
+        sentence['true'] = true
+        sentence['prediction'] = prediction
         predictions.append((true, prediction))
 
         if debug:
             print(true, prediction)
 
-    return predictions, extra_data
+    return test_sentences
 
 def predict_wrapper(args):
-    feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, all_tokens, neg_type, show_max_token, num_completions, debug, randomize_pos = args
-    return predict_activations(feature_index, layer, basis, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, all_tokens=all_tokens, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos)
+    location, test_pos, test_neg, show_pos, show_neg, binary_class, all_tokens, neg_type, show_max_token, num_completions, debug, randomize_pos, model = args
+    return predict_activations(location=location, test_pos=test_pos, test_neg=test_neg, show_pos=show_pos, show_neg=show_neg, binary_class=binary_class, all_tokens=all_tokens, neg_type=neg_type, show_max_token=show_max_token, num_completions=num_completions, debug=debug, randomize_pos=randomize_pos, model=model)
 
-def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_pos=0, show_neg=0, binary_class=True, all_tokens=False, neg_type='others', show_max_token=False, num_completions=1, debug=False, randomize_pos=True, seed=42, save_location='', feature_ids = None):
+def run_experiments(location, num_features, test_pos=10, test_neg=10, show_pos=0, show_neg=0, binary_class=False, all_tokens=True, neg_type='others', show_max_token=False, num_completions=3, debug=False, randomize_pos=True, seed=42, save_location='', feature_ids = None, model='gpt-3.5-turbo'):
     """
     - num_features: the number of random features to test
     - show_pos and show_neg: the number of positive and negative examples to show GPT3.5, respectively.
@@ -184,24 +191,32 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
     Run the predict_activations function on a set of random feature indices with the above hyperparameters. It saves the results to results/ before returning them.
     """
 
-    assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
-    assert basis in autoencoder_bases, f"Invalid basis: {basis} not in {autoencoder_bases}"
+    if isinstance(location, tuple):
+        basis, layer = location
+        assert layer in autoencoder_layers, f"Invalid layer: {layer} not in {autoencoder_layers}"
+        assert basis in autoencoder_bases, f"Invalid basis: {basis} not in {autoencoder_bases}"
+    else:
+        basis = None
+        layer = None
+        feature_directory = location
+   
     assert not (binary_class and all_tokens), f"binary_class and all_tokens cannot both be true"
 
     timestamp = time.time()
     random.seed(seed)
     np.random.seed(seed)
-    feature_indices = np.random.choice(num_layers(basis), size=num_features, replace=False)
     if feature_ids is not None:
         feature_indices = feature_ids[:num_features]
+    else:
+        feature_indices = np.random.choice(num_layers(basis), size=num_features, replace=False)
 
-    args = [(feature_index, layer, basis, test_pos, test_neg, show_pos, show_neg, binary_class, all_tokens, neg_type, show_max_token, num_completions, debug, randomize_pos) for feature_index in feature_indices]
+    args = [(f'{feature_directory}/{feature_index}.json', test_pos, test_neg, show_pos, show_neg, binary_class, all_tokens, neg_type, show_max_token, num_completions, debug, randomize_pos, model) for feature_index in feature_indices]
     
     predict_activations_results = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = []
         for i, arg in enumerate(args):
-            time.sleep(4) # Change this number if doing significantly more than 10 test features per feature_id
+            time.sleep(10) # Change this number if doing significantly more than 10 test features per feature_id
             future = executor.submit(predict_wrapper, arg)
             futures.append(future)
             print(f"Submitted {i+1} of {num_features} tasks. Been running for {int(time.time() - timestamp)} seconds")
@@ -225,10 +240,8 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
             'neg_type': neg_type,
             'show_max_token': show_max_token,
             'num_completions': num_completions,
-            'debug': debug,
             'randomize_pos': randomize_pos,
             'seed': seed,
-            'pos_classify_threshold': pos_classify_threshold,
         },
         'num_features': num_features,
         'results': [],
@@ -237,8 +250,7 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
     for i in range(len(feature_indices)):
         result_i = {
             'feature_index': feature_indices[i],
-            'gpt_predictions': predict_activations_results[i][0],
-            **predict_activations_results[i][1]
+            'gpt_predictions': predict_activations_results[i]
         }
         results['results'].append(result_i)
 
@@ -252,4 +264,3 @@ def run_experiments(num_features, layer, basis, test_pos=20, test_neg=20, show_p
     save_json_results(results, f'{save_dir}/exp_{timestamp}.json')
 
     return results
-

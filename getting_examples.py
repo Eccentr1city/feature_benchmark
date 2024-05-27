@@ -237,6 +237,26 @@ def sort_activations(file_path, pos_classify_threshold):
     return len(posActivations), len(negSelfActivations)
 
 
+def set_aside_activations(file_path, num_pos):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    
+    if 'labelActivations' not in data:
+        data['labelActivations'] = []
+
+    # Extract a random subset from 'posActivations'
+    subset = random.sample(data['posActivations'], min(num_pos, len(data['posActivations'])))
+    
+    # Remove the selected elements from 'posActivations' and add them to 'labelActivations'
+    data['posActivations'] = [item for item in data['posActivations'] if item not in subset]
+    data['labelActivations'].extend(subset)
+    
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+    
+    return len(data['posActivations']), len(data['labelActivations'])
+
+
 # Precompute a set of negative examples stolen from other features and add them to the JSON files in the subset folder
 def other_negative_activations(file_path, other_directory, model, sae, num_neg):
     with open(file_path, 'r') as file:

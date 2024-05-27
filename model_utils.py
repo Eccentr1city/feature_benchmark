@@ -140,7 +140,7 @@ def replace_feature_activation(
     """Given a set of SAE activations, replace particular feature activation with provided value"""
     replaced_inner_acts = copy.deepcopy(inner_acts)
     for seq in replaced_inner_acts:
-        for i in range(len(replaced_inner_acts[seq])):
+        for i in range(len(seq)):
             seq[i][feature_id] = replacement
     return replaced_inner_acts
 

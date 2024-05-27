@@ -36,18 +36,20 @@ def compare_recomputed_values(file_path):
         neg_elementwise_percent_change.append(elem_change)
         neg_magnitude_ratios.append(mag_ratio)
 
-    return pos_elementwise_percent_change, neg_elementwise_percent_change, pos_magnitude_ratios, neg_magnitude_ratios
+    return pos_elementwise_percent_change, neg_elementwise_percent_change, pos_magnitude_ratios, neg_magnitude_ratios, len(data['posActivations'])
 
 
 def compare_recomputed_group(directory):
     file_names = []
     mean_pos_ratio = []
     mean_neg_ratio = []
+    num_positives = []
     for filename in os.listdir(directory):
         if filename.endswith('.json'):
             file_path = os.path.join(directory, filename)
         file_names.append(os.path.basename(file_path))
-        pos_elementwise_percent_change, neg_elementwise_percent_change, pos_magnitude_ratios, neg_magnitude_ratios = compare_recomputed_values(file_path)
+        pos_elementwise_percent_change, neg_elementwise_percent_change, pos_magnitude_ratios, neg_magnitude_ratios, num_pos = compare_recomputed_values(file_path)
+        num_positives.append(num_pos)
         if len(pos_magnitude_ratios) > 0:
             mean_pos_ratio.append(np.array(pos_magnitude_ratios).mean())
         else:
@@ -57,4 +59,4 @@ def compare_recomputed_group(directory):
         else:
             mean_neg_ratio.append(0)
 
-    return file_names, mean_pos_ratio, mean_neg_ratio
+    return file_names, mean_pos_ratio, mean_neg_ratio, num_positives
